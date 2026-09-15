@@ -204,7 +204,7 @@ public static class TemplateConverter
         foreach (var model in models)
         {
             converted.Add(EmitPage(
-                model, request, keys, written,
+                model, request, keys, written, family,
                 reportClass, navigatorClass, validatorClass, routedActions, visibilityClass, computedClass));
         }
 
@@ -231,10 +231,10 @@ public static class TemplateConverter
 
         var routesClass = request.Prefix.Length > 0 ? $"{request.Prefix}FormRoutes" : $"{family}Routes";
 
-        Write(written, app, "Views", $"{routesClass}.g.cs",
+        Write(written, app, family, "Views", $"{routesClass}.g.cs",
             RoutesEmitter.EmitRegistrations(doc, models, request.RootNamespace, routesClass, reportClass, doc.FolderName));
 
-        Write(written, app, "Models", $"{reportClass}.g.cs",
+        Write(written, app, family, "Models", $"{reportClass}.g.cs",
             ReportEmitter.Emit(doc, models, request.RootNamespace, reportClass, vocabulary));
 
         var navigator = NavigatorEmitter.Emit(
@@ -247,12 +247,12 @@ public static class TemplateConverter
             doc, models, ComputedValueTable.Build(doc), state.Cleared,
             request.RootNamespace, computedClass, reportClass);
 
-        Write(written, app, "Views", $"{validatorClass}.g.cs", validator.Code);
-        Write(written, app, "Views", $"{visibilityClass}.g.cs", state.Code);
-        Write(written, app, "Views", $"{computedClass}.g.cs", computed.Code);
-        Write(written, app, "Views", $"{navigatorClass}.g.cs", navigator.Code);
+        Write(written, app, family, "Views", $"{validatorClass}.g.cs", validator.Code);
+        Write(written, app, family, "Views", $"{visibilityClass}.g.cs", state.Code);
+        Write(written, app, family, "Views", $"{computedClass}.g.cs", computed.Code);
+        Write(written, app, family, "Views", $"{navigatorClass}.g.cs", navigator.Code);
 
-        var remaining = Write(written, app, "Views", $"{family}.Remaining.md",
+        var remaining = Write(written, app, family, "Views", $"{family}.Remaining.md",
             RemainingWorkEmitter.Emit(doc, validation, validator, state, computed, models));
 
         return result with
@@ -273,8 +273,8 @@ public static class TemplateConverter
 
     private static ConvertedPage EmitPage(
         PageEmitModel model, ConversionRequest request, IReadOnlySet<string> keys, List<string> written,
-        string reportClass, string navigatorClass, string validatorClass, IReadOnlySet<string> routedActions,
-        string visibilityClass, string computedClass)
+        string family, string reportClass, string navigatorClass, string validatorClass,
+        IReadOnlySet<string> routedActions, string visibilityClass, string computedClass)
     {
         var ns = request.RootNamespace;
 
@@ -293,17 +293,25 @@ public static class TemplateConverter
         if (problems.Count > 0 || request.DryRun) return page;
 
         var app = request.AppDirectory;
-        Write(written, app, "Views", $"{model.ClassName}.xaml", xaml);
-        Write(written, app, "Views", $"{model.ClassName}.xaml.cs", codeBehind);
-        Write(written, app, "Models", $"{model.AnswersClassName}.g.cs", answers);
-        Write(written, app, "ViewModels", $"{model.ClassName}ViewModel.g.cs", viewModel);
+        Write(written, app, family, "Views", $"{model.ClassName}.xaml", xaml);
+        Write(written, app, family, "Views", $"{model.ClassName}.xaml.cs", codeBehind);
+        Write(written, app, family, "Models", $"{model.AnswersClassName}.g.cs", answers);
+        Write(written, app, family, "ViewModels", $"{model.ClassName}ViewModel.g.cs", viewModel);
 
         return page;
     }
 
-    private static string Write(List<string> written, string app, string area, string fileName, string content)
+    /// <summary>
+    /// Everything a template emits lands together under Generated/&lt;template&gt;, grouped by
+    /// area beneath that - not scattered across Views/Generated, Models/Generated and
+    /// ViewModels/Generated, where every template's output piles into the same three folders.
+    /// Namespaces are unchanged by this: reflection finds a template by its namespace, not
+    /// where its files sit on disk.
+    /// </summary>
+    private static string Write(
+        List<string> written, string app, string family, string area, string fileName, string content)
     {
-        var path = Path.Combine(app, area, "Generated", fileName);
+        var path = Path.Combine(app, "Generated", family, area, fileName);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.WriteAllText(path, content);
         written.Add(path);

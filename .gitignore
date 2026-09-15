@@ -503,3 +503,8 @@ src/TemplateGenerator.App/ViewModels/Generated/*
 # The hand-written halves of generated view models carry client business rules too.
 src/TemplateGenerator.App/ViewModels/*PageViewModel.cs
 !src/TemplateGenerator.App/ViewModels/Demo*PageViewModel.cs
+
+# Newer templates land in Generated/<template>/Views|Models|ViewModels instead of scattering
+# across Views/Generated, Models/Generated and ViewModels/Generated above - same client
+# material, so not committed. Demo still writes to the old layout for now.
+src/TemplateGenerator.App/Generated/
