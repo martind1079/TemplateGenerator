@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentView
+    x:Class="TemplateGenerator.App.Views.Controls.NullableTimePicker"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    x:Name="Root">
+
+    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+
+        <Grid>
+            <TimePicker x:Name="Picker"
+                        PropertyChanged="OnPickerPropertyChanged"
+                        Unfocused="OnPickerUnfocused" />
+
+            <!--
+                See the note on the equivalent label in NullableDatePicker.xaml: WinUI's TimePicker
+                always shows a real hour/minute/AM-PM, so on Windows this label paints over it with
+                an opaque background instead of relying on the control's own content being blank.
+            -->
+            <Label x:Name="PlaceholderLabel"
+                   Margin="12,0"
+                   HorizontalOptions="Fill"
+                   VerticalOptions="Fill"
+                   VerticalTextAlignment="Center"
+                   IsVisible="{Binding IsEmpty, Source={x:Reference Root}}"
+                   Style="{StaticResource FormFieldInstruction}"
+                   Text="{Binding Placeholder, Source={x:Reference Root}}">
+                <Label.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnSetRequested" />
+                </Label.GestureRecognizers>
+            </Label>
+        </Grid>
+
+        <Label Grid.Column="1"
+               IsVisible="{Binding HasValue, Source={x:Reference Root}}"
+               Style="{StaticResource FormInputAccessory}"
+               Text="&#215;"
+               VerticalOptions="Center">
+            <Label.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnClear" />
+            </Label.GestureRecognizers>
+        </Label>
+
+    </Grid>
+
+</ContentView>

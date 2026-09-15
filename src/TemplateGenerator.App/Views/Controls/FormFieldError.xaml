@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentView
+    x:Class="TemplateGenerator.App.Views.Controls.FormFieldError"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    x:Name="Root"
+    IsVisible="{Binding HasMessage, Source={x:Reference Root}}">
+
+    <Label Style="{StaticResource FormFieldErrorText}" Text="{Binding Message, Source={x:Reference Root}}" />
+
+</ContentView>

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+
+    <!-- Brand -->
+    <Color x:Key="Primary">#3B5BDB</Color>
+    <Color x:Key="PrimaryLight">#748FFC</Color>
+    <Color x:Key="PrimaryDeep">#2B3F9E</Color>
+    <Color x:Key="Accent">#0CA678</Color>
+    <Color x:Key="Warning">#E8A33D</Color>
+    <Color x:Key="Danger">#E03131</Color>
+
+    <!-- Surfaces: light -->
+    <Color x:Key="PageBackground">#F5F6F9</Color>
+    <Color x:Key="Surface">#FFFFFF</Color>
+    <Color x:Key="SurfaceAlt">#EDEFF4</Color>
+    <Color x:Key="Border">#DCE0E8</Color>
+
+    <!-- Surfaces: dark -->
+    <Color x:Key="PageBackgroundDark">#15171C</Color>
+    <Color x:Key="SurfaceDark">#1D2027</Color>
+    <Color x:Key="SurfaceAltDark">#23262E</Color>
+    <Color x:Key="BorderDark">#32363F</Color>
+
+    <!-- Inputs. A touch stronger than Border: a field has to read as somewhere to type,
+         and the same edge is what tells a select from a text box once both are outlined. -->
+    <Color x:Key="InputBorder">#B9C0CC</Color>
+    <Color x:Key="InputBorderDark">#4A505C</Color>
+    <Color x:Key="InputAccessory">#6B7280</Color>
+    <Color x:Key="InputAccessoryDark">#9AA3AF</Color>
+
+    <!-- Text -->
+    <Color x:Key="TextPrimary">#171A21</Color>
+    <Color x:Key="TextSecondary">#5C6373</Color>
+    <Color x:Key="TextPrimaryDark">#E8EAEF</Color>
+    <Color x:Key="TextSecondaryDark">#99A1B0</Color>
+
+    <!-- Neutrals kept for platform defaults that expect them -->
+    <Color x:Key="White">#FFFFFF</Color>
+    <Color x:Key="Black">#000000</Color>
+    <Color x:Key="Gray200">#C8C8C8</Color>
+    <Color x:Key="Gray400">#919191</Color>
+    <Color x:Key="Gray600">#404040</Color>
+
+    <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource Primary}" />
+    <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource Accent}" />
+    <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource Surface}" />
+
+</ResourceDictionary>

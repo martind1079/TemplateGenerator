@@ -1,0 +1,468 @@
+using System.Text;
+using FormWorks.Templates.Analysis;
+using FormWorks.Templates.Model;
+
+namespace FormWorks.Templates.Emit;
+
+/// <summary>A reference whose element could not be decided.</summary>
+public sealed record UnattributedRule(string Name, string Property, IReadOnlyList<string> Sources);
+
+public sealed record VisibilityResult(
+    string Code,
+    IReadOnlySet<string> Shown,
+    IReadOnlySet<string> Usable,
+    IReadOnlyList<FieldState> LeftToAPerson)
+{
+    /// <summary>
+    /// The name the scripts write each element under, by label.
+    ///
+    /// Kept because it is the name the worklist prints and therefore the one a developer
+    /// searches for. A section called Next and aliased NextVI is one of fourteen; the alias
+    /// is what identifies it, and naming the generated property after the element would
+    /// call it ShowNext.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> Names { get; init; }
+        = new Dictionary<string, string>(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Fields whose answer is cleared when they stop being shown, by label. Handlers that
+    /// clear these on hide are already covered and need no one's attention.
+    /// </summary>
+    public IReadOnlySet<string> Cleared { get; init; } = new HashSet<string>();
+
+    /// <summary>References nothing in the template decides the element for.</summary>
+    public IReadOnlyList<UnattributedRule> Unattributed { get; init; } = [];
+
+    public int FieldsEmitted => Shown.Count + Usable.Count;
+
+    /// <summary>Elements whose shown state a person has to decide, by label.</summary>
+    public IReadOnlySet<string> UndecidedShown => LeftToAPerson
+        .Where(f => f.Property == "visible").Select(f => f.Target.Label)
+        .ToHashSet(StringComparer.Ordinal);
+
+    /// <summary>Elements whose usable state a person has to decide, by label.</summary>
+    public IReadOnlySet<string> UndecidedUsable => LeftToAPerson
+        .Where(f => f.Property == "enabled").Select(f => f.Target.Label)
+        .ToHashSet(StringComparer.Ordinal);
+}
+
+/// <summary>
+/// Writes when a field is shown and when it is usable, as typed C#.
+///
+/// The translation this performs is not a transcription, and the difference is the whole
+/// risk. FormWorks state is imperative: a field is shown because a handler set it so, and
+/// it stays that way until something sets it otherwise. A generated property is a
+/// predicate: it is true exactly while its condition holds. The two agree only where every
+/// write to a field is guarded and the guards are reachable from the answers alone.
+///
+/// So only fields written from a single handler are emitted. Within one handler the writes
+/// are in source order and the last one wins, which reconstructs exactly by testing them in
+/// reverse. Across handlers the answer depends on which field the agent touched last, and
+/// no predicate over the answers can recover that, so those go to a person.
+/// </summary>
+public static class VisibilityEmitter
+{
+    public static VisibilityResult Emit(
+        TemplateDocument doc,
+        IReadOnlyList<PageEmitModel> pages,
+        VisibilityTableReport visibility,
+        string rootNamespace,
+        string className,
+        string reportClassName)
+    {
+        var paths = GuardRenderer.PathIndex(pages);
+        var types = GuardRenderer.TypeIndex(pages);
+
+        // A page's own visibility is how FormWorks decided which pages the form visits,
+        // and that is already recovered as routing and emitted as the navigator's path.
+        // Carrying it here as well would report the same decision twice and invite someone
+        // to write it a second time, by hand, where the two could disagree.
+        var candidates = visibility.Fields
+            .Where(f => !f.Target.IsPage)
+            .ToList();
+
+        var emittable = Emittable(candidates, paths);
+        var refused = candidates.Where(f => !emittable.Contains(f)).ToList();
+
+        // Elements the template starts hidden that nothing ever shows. They carry no rule,
+        // so nothing above accounts for them, and without an entry here they would render:
+        // the generator would be treating "no rule" as "always shown" when the template
+        // said the opposite. 468 across the estate, and they are not decoration. One example template
+        // hides the section holding the visit quotas that validation reads.
+        var written = visibility.Fields
+            .Select(f => f.Target.Label)
+            .ToHashSet(StringComparer.Ordinal);
+
+        var alwaysHidden = doc.AllNodes
+            .Where(n => n.Hidden && !n.IsPage && !written.Contains(n.Label))
+            .Select(n => n.Label)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(l => l, StringComparer.Ordinal)
+            .ToList();
+
+        var sb = new StringBuilder();
+        sb.AppendLine("// <auto-generated>");
+        sb.AppendLine($"//     Generated from {doc.FolderName}.");
+        sb.AppendLine("//     Do not edit. Regenerate instead; edits here are lost.");
+        sb.AppendLine("// </auto-generated>");
+        sb.AppendLine("#nullable enable");
+        sb.AppendLine();
+        sb.AppendLine($"using {rootNamespace}.Models.Generated;");
+        sb.AppendLine();
+        sb.AppendLine($"namespace {rootNamespace}.Views.Generated;");
+        sb.AppendLine();
+        sb.AppendLine("/// <summary>");
+        sb.AppendLine($"/// When a field on a {GuardRenderer.Escape(doc.FolderName)} report is shown, and when it");
+        sb.AppendLine("/// can be used.");
+        sb.AppendLine("///");
+        sb.AppendLine("/// A field nothing writes is always shown, so absence from these tables is an");
+        sb.AppendLine("/// answer rather than a gap.");
+        sb.AppendLine("/// </summary>");
+        sb.AppendLine($"public static class {className}");
+        sb.AppendLine("{");
+
+        var resolver = new NameResolver(doc);
+
+        // The state a rule falls back to when none of its guards match, from the element
+        // the rule is about.
+        var startsHidden = candidates
+            .GroupBy(f => f.Target.Label, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.First().Target.Hidden, StringComparer.Ordinal);
+
+        var shown = Table(sb, emittable, paths, types, resolver, "visible", "IsShown",
+            "Whether a field is currently shown.", reportClassName, alwaysHidden, startsHidden);
+
+        var usable = Table(sb, emittable, paths, types, resolver, "enabled", "IsUsable",
+            "Whether a field can be used. A field can be shown and not usable.", reportClassName,
+            [], startsHidden);
+
+        var cleared = EmitClearHidden(sb, pages, emittable, refused, reportClassName);
+
+        sb.AppendLine();
+        GuardRenderer.EmitSliceHelper(sb);
+        sb.AppendLine("}");
+
+        return new VisibilityResult(sb.ToString(), shown, usable, refused)
+        {
+            Cleared = cleared,
+
+            Names = candidates
+                .GroupBy(f => f.Target.Label, StringComparer.Ordinal)
+                .ToDictionary(g => g.Key, g => g.First().Name, StringComparer.Ordinal),
+
+            Unattributed = visibility.Unresolved
+                .GroupBy(u => (u.Name, u.Property))
+                .Select(g => new UnattributedRule(
+                    g.Key.Name,
+                    g.Key.Property,
+                    g.Select(u => u.From.Label).Distinct(StringComparer.Ordinal).ToList()))
+                .ToList()
+        };
+    }
+
+    /// <summary>
+    /// What one element on a page binds its shown and usable state to.
+    /// </summary>
+    /// <param name="Name">The generated property name, an identifier.</param>
+    /// <param name="Key">The name the scripts use, which is what the tables are keyed by.</param>
+    public sealed record StateBinding(
+        string Name, string Key,
+        bool Shown, bool Usable,
+        bool UndecidedShown, bool UndecidedUsable,
+        bool StartsHidden)
+    {
+        public bool Undecided => UndecidedShown || UndecidedUsable;
+    }
+
+    /// <summary>
+    /// Which element each state rule belongs to, keyed by the element rather than by the
+    /// name the scripts use.
+    ///
+    /// Keyed that way because the names are not unique: 483 across the estate are claimed
+    /// by more than one element, typically a section and the question inside it that
+    /// decides whether the section is shown. Keying by name binds the rule to both, which
+    /// hides the question behind its own answer and leaves it unanswerable.
+    ///
+    /// Where a name is shared, the rule is attributed to the container. A rule that hides
+    /// the very field whose value decides it can never be satisfied, so it cannot be what
+    /// the template meant; and the validation handlers agree, reading VehicleSighted.visible
+    /// from inside the section of that name. Where that does not settle it, no element is
+    /// bound and the field is reported instead.
+    /// </summary>
+    public static Dictionary<string, StateBinding> StateNames(PageEmitModel page, VisibilityResult state)
+    {
+        var bindings = new Dictionary<string, StateBinding>(StringComparer.Ordinal);
+        var taken = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var node in page.Page.DescendantsAndSelf())
+        {
+            var label = node.Label;
+
+            var shown = state.Shown.Contains(label);
+            var usable = state.Usable.Contains(label);
+            var undecidedShown = state.UndecidedShown.Contains(label);
+            var undecidedUsable = state.UndecidedUsable.Contains(label);
+
+            if (!shown && !usable && !undecidedShown && !undecidedUsable) continue;
+
+            // Named from the name the scripts use, because that is what the worklist
+            // prints and what a developer searches for. The element is the identity; the
+            // name is how everyone refers to it.
+            var stem = PageEmitModelBuilder.Identifier(
+                state.Names.GetValueOrDefault(label)
+                ?? (node.ElementName is { Length: > 0 } e ? e : label.Split('.')[^1]));
+
+            var name = stem;
+            for (var n = 2; !taken.Add(name); n++) name = stem + n;
+
+            bindings[label] = new StateBinding(
+                name, label, shown, usable, undecidedShown, undecidedUsable, node.Hidden);
+        }
+
+        return bindings;
+    }
+
+    /// <summary>
+    /// Which fields can be stated as a predicate at all.
+    ///
+    /// Three reasons to refuse, and they are different failures. A guard that did not parse
+    /// leaves the condition unknown. Several handlers writing one field leaves the order
+    /// unknown. And a field whose visibility is decided by another field's visibility can
+    /// close a loop, which a predicate cannot express and which would recurse forever if it
+    /// were emitted, so the cycle is broken here rather than at runtime.
+    /// </summary>
+    private static HashSet<FieldState> Emittable(
+        IReadOnlyList<FieldState> fields, IReadOnlyDictionary<string, string> paths)
+    {
+        var candidates = fields
+            .Where(f => f.Shape is StateShape.SingleSource or StateShape.Static)
+            .ToList();
+
+        var byElement = candidates
+            .GroupBy(f => (f.Target.Label, f.Property))
+            .ToDictionary(g => g.Key, g => g.First());
+
+        // Every field a predicate reads the state of. A field reading the state of one that
+        // is not emitted is still fine: that one answers "always shown".
+        var reads = candidates.ToDictionary(
+            f => f,
+            f => f.Writes
+                .SelectMany(w => w.When)
+                .SelectMany(c => c.Atoms)
+                .Where(g => g.IsStateTest)
+                .Select(g => g.Field == "this" ? f.Target.Label : g.Field)
+                .Distinct(StringComparer.Ordinal)
+                .ToList());
+
+        var safe = new HashSet<FieldState>();
+        var walking = new HashSet<FieldState>();
+
+        bool Visit(FieldState field)
+        {
+            if (safe.Contains(field)) return true;
+            if (!walking.Add(field)) return false;
+
+            foreach (var name in reads.GetValueOrDefault(field, []))
+            {
+                if (byElement.TryGetValue((name, field.Property), out var next) && !Visit(next))
+                {
+                    walking.Remove(field);
+                    return false;
+                }
+            }
+
+            walking.Remove(field);
+
+            // A field whose own answer cannot be found is not worth emitting a predicate
+            // for: the guard would render as an unresolved false and hide it always.
+            if (field.Writes.Any(w => w.When.SelectMany(c => c.Atoms)
+                    .Any(g => !g.IsStateTest && g.Field != "this" && !paths.ContainsKey(g.Field))))
+                return false;
+
+            safe.Add(field);
+            return true;
+        }
+
+        foreach (var field in candidates) Visit(field);
+        return safe;
+    }
+
+    /// <summary>
+    /// One field's state as a predicate.
+    ///
+    /// The writes are tested in reverse because the last write in the handler is the one
+    /// that stands. Where nothing matches, the field keeps the state the template gave it.
+    /// </summary>
+    private static string Predicate(
+        FieldState field, IReadOnlyDictionary<string, string> paths,
+        IReadOnlyDictionary<string, string> types,
+        NameResolver resolver, bool startsHidden)
+    {
+        var sb = new StringBuilder();
+        var source = field.Writes[0].SourceField;
+
+        foreach (var write in field.Writes.Reverse())
+        {
+            // A guard reading another field's state names it the way the handler does, so
+            // it resolves from the handler's own page like any other reference.
+            var from = write.Source;
+
+            var condition = GuardRenderer.Render(
+                write.When, paths, source, "IsShown",
+                name => resolver.Resolve(name, from)?.Label ?? name,
+                types);
+
+            // An unconditional write ends the chain: nothing before it can be reached.
+            if (condition == "true")
+                return sb.Length == 0
+                    ? write.Value.ToString().ToLowerInvariant()
+                    : sb.Append(write.Value.ToString().ToLowerInvariant()).ToString();
+
+            sb.Append(condition).Append(" ? ").Append(write.Value.ToString().ToLowerInvariant()).Append(" : ");
+        }
+
+        sb.Append((!startsHidden).ToString().ToLowerInvariant());
+        return sb.ToString();
+    }
+
+    private static HashSet<string> Table(
+        StringBuilder sb,
+        IEnumerable<FieldState> emittable,
+        IReadOnlyDictionary<string, string> paths,
+        IReadOnlyDictionary<string, string> types,
+        NameResolver resolver,
+        string property,
+        string methodName,
+        string summary,
+        string reportClassName,
+        IReadOnlyList<string> alwaysHidden,
+        IReadOnlyDictionary<string, bool> startsHidden)
+    {
+        var fields = emittable
+            .Where(f => f.Property == property)
+            .OrderBy(f => f.Target.Label, StringComparer.Ordinal)
+            .ToList();
+
+        sb.AppendLine();
+        sb.AppendLine("    /// <summary>");
+        sb.AppendLine($"    /// {summary}");
+        sb.AppendLine("    /// </summary>");
+        sb.AppendLine($"    public static bool {methodName}({reportClassName} report, string field)");
+        sb.AppendLine("    {");
+        sb.AppendLine("        // What a person decided wins, because for those fields this table has no");
+        sb.AppendLine("        // entry and would answer that everything is shown.");
+        sb.AppendLine("        if (report.Decided.TryGetValue(field, out var decided)) return decided;");
+        sb.AppendLine();
+        sb.AppendLine("        return field switch");
+        sb.AppendLine("        {");
+
+        foreach (var field in fields)
+            sb.AppendLine(
+                $"            \"{GuardRenderer.Escape(field.Target.Label)}\" => "
+                + $"{Predicate(field, paths, types, resolver, startsHidden.GetValueOrDefault(field.Target.Label, field.StartsHidden))},");
+
+        if (alwaysHidden.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("            // Hidden by the template, and nothing in it ever shows these.");
+
+            foreach (var label in alwaysHidden)
+                sb.AppendLine($"            \"{GuardRenderer.Escape(label)}\" => false,");
+        }
+
+        if (fields.Count == 0 && alwaysHidden.Count == 0)
+            sb.AppendLine("            // The template decides this for no field.");
+
+        sb.AppendLine();
+        sb.AppendLine("            // Nothing decides it, so it is shown, as the template shows it.");
+        sb.AppendLine("            _ => true");
+        sb.AppendLine("        };");
+        sb.AppendLine("    }");
+
+        return fields.Select(f => f.Target.Label).Concat(alwaysHidden).ToHashSet(StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// Forgets the answer to a question that is no longer being asked.
+    ///
+    /// FormWorks kept it: of 1,405 handlers that hide a field across the estate, three
+    /// clear its value. That leaves an answer given, then hidden by a later change, still
+    /// in the outbound payload, which is the same failure as a date defaulting to today.
+    /// So this departs from the templates deliberately.
+    /// </summary>
+    private static HashSet<string> EmitClearHidden(
+        StringBuilder sb,
+        IReadOnlyList<PageEmitModel> pages,
+        IEnumerable<FieldState> emittable,
+        IEnumerable<FieldState> refused,
+        string reportClassName)
+    {
+        // Keyed by element, so a rule belonging to the section around this field is no
+        // longer mistaken for the field's own. That mistake cleared the answer that decided
+        // the rule, and the agent could not select the value at all.
+        //
+        // Elements left to a person count too. Their answer comes from the report rather
+        // than from the table below, and without them here a section a person hides keeps
+        // every answer inside it.
+        var hidden = emittable.Concat(refused)
+            .Where(f => f.Property == "visible")
+            .Select(f => f.Target.Label)
+            .ToHashSet(StringComparer.Ordinal);
+
+        sb.AppendLine();
+        sb.AppendLine("    /// <summary>");
+        sb.AppendLine("    /// Clears the answer to every field that is not currently shown.");
+        sb.AppendLine("    /// </summary>");
+        sb.AppendLine($"    public static void ClearHidden({reportClassName} report)");
+        sb.AppendLine("    {");
+
+        var wrote = false;
+        var cleared = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var page in pages)
+        {
+            foreach (var element in page.AllFields)
+            {
+                if (element.Mapping is not { } mapping) continue;
+
+                // The field, and every container around it. A form hides a section, not
+                // each question inside it, so checking only the field's own state clears
+                // almost nothing: one field on all of one example template.
+                var deciders = new List<string>();
+
+                for (var n = element.Source; n is not null && !n.IsPage; n = n.Parent)
+                    if (hidden.Contains(n.Label)) deciders.Add(n.Label);
+
+                if (deciders.Count == 0) continue;
+
+                var path = $"report.{page.PageName}.{element.PropertyName}";
+                var blank = mapping.DefaultExpression ?? Blank(mapping.ClrType);
+
+                var test = string.Join(
+                    "\n            || ",
+                    deciders.Select(d => $"!IsShown(report, \"{GuardRenderer.Escape(d)}\")"));
+
+                sb.AppendLine($"        if ({test})");
+                sb.AppendLine($"            {path} = {blank};");
+                cleared.Add(element.Source.Label);
+                wrote = true;
+            }
+        }
+
+        if (!wrote)
+            sb.AppendLine("        // No field on this template is ever hidden.");
+
+        sb.AppendLine("    }");
+        return cleared;
+    }
+
+    private static string Blank(string clrType) => clrType switch
+    {
+        "bool" => "false",
+        "int" => "0",
+        "double" => "0",
+        _ when clrType.EndsWith('?') => "null",
+        "string" => "\"\"",
+        _ => "default"
+    };
+}

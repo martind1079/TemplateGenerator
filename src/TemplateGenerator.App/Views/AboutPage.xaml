@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    x:Class="TemplateGenerator.App.Views.AboutPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:sys="clr-namespace:System;assembly=netstandard"
+    xmlns:vm="clr-namespace:TemplateGenerator.App.ViewModels"
+    Title="About"
+    x:DataType="vm:AboutViewModel">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="20">
+
+            <Label Style="{StaticResource PageTitle}" Text="About this demo" />
+
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Spacing="14">
+                    <Label Text="{Binding Summary}" />
+
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Highlights}" Spacing="8">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="sys:String">
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                    <Ellipse Margin="0,6,0,0"
+                                             Fill="{StaticResource Accent}"
+                                             HeightRequest="6"
+                                             VerticalOptions="Start"
+                                             WidthRequest="6" />
+                                    <Label Grid.Column="1" Style="{StaticResource Subtle}" Text="{Binding .}" />
+                                </Grid>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

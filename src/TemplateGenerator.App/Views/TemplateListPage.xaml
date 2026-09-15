@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    x:Class="TemplateGenerator.App.Views.TemplateListPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:models="clr-namespace:TemplateGenerator.App.Models"
+    xmlns:vm="clr-namespace:TemplateGenerator.App.ViewModels"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Templates"
+    x:DataType="vm:TemplateListViewModel">
+
+    <ScrollView>
+        <Grid x:Name="PageRoot"
+              Padding="24"
+              RowDefinitions="Auto,Auto"
+              RowSpacing="20">
+
+            <VerticalStackLayout Spacing="4">
+                <Label Style="{StaticResource PageTitle}" Text="Templates" />
+                <Label Style="{StaticResource Subtle}"
+                       Text="Formworks templates converted into this build. Select one to open its first page." />
+            </VerticalStackLayout>
+
+            <Border Grid.Row="1" Padding="0" Style="{StaticResource Card}">
+                <VerticalStackLayout>
+
+                    <Grid Padding="18,14" ColumnDefinitions="3*,Auto,2*" ColumnSpacing="12">
+                        <Label Style="{StaticResource Overline}" Text="Template" />
+                        <Label Grid.Column="1" Style="{StaticResource Overline}" Text="Pages" />
+                        <Label Grid.Column="2" Style="{StaticResource Overline}" Text="Entry route" />
+                    </Grid>
+
+                    <BoxView BackgroundColor="{AppThemeBinding Light={StaticResource Border}, Dark={StaticResource BorderDark}}" HeightRequest="1" />
+
+                    <CollectionView ItemsSource="{Binding Templates}" SelectionMode="None">
+                        <CollectionView.EmptyView>
+                            <Label Padding="18,20"
+                                   Style="{StaticResource Subtle}"
+                                   Text="No templates have been converted into this build yet. Run scripts/convert to add one." />
+                        </CollectionView.EmptyView>
+
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:FormTemplateInfo">
+                                <Grid Padding="18,14" ColumnDefinitions="3*,Auto,2*" ColumnSpacing="12">
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding Source={x:Reference PageRoot}, Path=BindingContext.OpenTemplateCommand}" CommandParameter="{Binding .}" />
+                                    </Grid.GestureRecognizers>
+
+                                    <VerticalStackLayout Spacing="2">
+                                        <Label FontFamily="OpenSansSemibold" Text="{Binding Name}" />
+                                        <Label Style="{StaticResource Subtle}" Text="{Binding PageTitles, Converter={StaticResource JoinTitles}}" />
+                                    </VerticalStackLayout>
+
+                                    <Label Grid.Column="1"
+                                           HorizontalOptions="End"
+                                           Style="{StaticResource Subtle}"
+                                           Text="{Binding PageCount}"
+                                           VerticalOptions="Center" />
+
+                                    <Label Grid.Column="2"
+                                           FontSize="12"
+                                           Style="{StaticResource Subtle}"
+                                           Text="{Binding EntryRoute}"
+                                           VerticalOptions="Center" />
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+    </ScrollView>
+
+</ContentPage>

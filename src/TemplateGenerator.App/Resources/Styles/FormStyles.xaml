@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+    Styles consumed by generated form XAML. The converter emits markup that references these keys,
+    so a form's appearance can be retuned here without regenerating anything.
+-->
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+
+
+
+
+
+
+    <!-- Chrome drawn around an Entry/Editor/Picker inside a FormField -->
+    <Style x:Key="FormInputBox" TargetType="Border">
+        <Setter Property="BackgroundColor"
+                Value="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource SurfaceAltDark}}" />
+        <Setter Property="Stroke"
+                Value="{AppThemeBinding Light={StaticResource Border}, Dark={StaticResource BorderDark}}" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 8" />
+        <Setter Property="Padding" Value="12,2" />
+    </Style>
+
+    <!-- ===================================================================
+         Keys named by generated XAML.
+
+         The converter commits to no appearance of its own: it names these three
+         and this file decides what they mean, so restyling a converted form is an
+         edit here with no regeneration.
+         =================================================================== -->
+
+    <!-- The label above a field. -->
+    <Style x:Key="FormFieldCaption" TargetType="Label">
+        <Setter Property="FontFamily" Value="OpenSansSemibold" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="TextColor"
+                Value="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource TextSecondaryDark}}" />
+    </Style>
+
+    <!-- Static text the template carries as instructions to the agent. -->
+    <Style x:Key="FormFieldInstruction" TargetType="Label">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="TextColor"
+                Value="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource TextSecondaryDark}}" />
+    </Style>
+
+    <!-- A template Line element. -->
+    <Style x:Key="FormDivider" TargetType="BoxView">
+        <Setter Property="HeightRequest" Value="1" />
+        <Setter Property="Color"
+                Value="{AppThemeBinding Light={StaticResource Border}, Dark={StaticResource BorderDark}}" />
+    </Style>
+
+    <!-- ===================================================================
+         Keys used by the house controls in Views/Controls. Ours, not the
+         converter's: it never names these.
+         =================================================================== -->
+
+    <Style x:Key="FormFieldErrorText" TargetType="Label">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="TextColor" Value="{StaticResource Danger}" />
+    </Style>
+
+    <Style x:Key="FormSubSectionCard" TargetType="Border">
+        <Setter Property="BackgroundColor"
+                Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
+        <Setter Property="Stroke"
+                Value="{AppThemeBinding Light={StaticResource Border}, Dark={StaticResource BorderDark}}" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 10" />
+        <Setter Property="Padding" Value="0" />
+    </Style>
+
+    <Style x:Key="FormSubSectionHeading" TargetType="Label">
+        <Setter Property="FontFamily" Value="OpenSansSemibold" />
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="TextColor"
+                Value="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource TextPrimaryDark}}" />
+    </Style>
+
+    <!-- The affordance that clears a nullable date or time. -->
+    <Style x:Key="FormInputAccessory" TargetType="Label">
+        <Setter Property="FontSize" Value="20" />
+        <Setter Property="TextColor"
+                Value="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource TextSecondaryDark}}" />
+    </Style>
+
+</ResourceDictionary>

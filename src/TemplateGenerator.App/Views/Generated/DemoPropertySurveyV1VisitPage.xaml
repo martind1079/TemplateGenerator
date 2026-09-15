@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Generated from Demo Property Survey V1, page Visit. Do not edit. -->
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:controls="clr-namespace:TemplateGenerator.App.Views.Controls"
+             xmlns:viewModels="clr-namespace:TemplateGenerator.App.ViewModels.Generated"
+             x:Class="TemplateGenerator.App.Views.Generated.DemoPropertySurveyV1VisitPage"
+             x:DataType="viewModels:DemoPropertySurveyV1VisitPageViewModel"
+             Title="Visit">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="20">
+
+            <!-- Which pages this report will pass through, given the answers so far. -->
+            <controls:FormStepSelectorControl Steps="{Binding Steps}"
+                                             StepCommand="{Binding GoToStepCommand}" />
+
+            <Grid ColumnDefinitions="940*,40*">
+                <controls:SubSectionControl Title="Visit details" Grid.Column="0">
+                    <VerticalStackLayout Padding="20,10">
+                        <VerticalStackLayout Spacing="5">
+                            <Label Text="Surveyor name" Style="{StaticResource FormFieldCaption}" />
+                            <Entry Text="{Binding Answers.SurveyorName}" />
+                            <controls:FormFieldError Message="{Binding Answers.SurveyorNameError}"
+                                                    IsArmed="{Binding Report.ShowValidationErrors}" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Spacing="5">
+                            <Label Text="Property reference" Style="{StaticResource FormFieldCaption}" />
+                            <Entry Text="{Binding Answers.PropertyReference}" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Spacing="5">
+                            <Label Text="Date of visit" Style="{StaticResource FormFieldCaption}" />
+                            <controls:NullableDatePicker Date="{Binding Answers.VisitDate}" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Spacing="5">
+                            <Label Text="Time of visit" Style="{StaticResource FormFieldCaption}" />
+                            <controls:NullableTimePicker Time="{Binding Answers.VisitTime}" />
+                        </VerticalStackLayout>
+                        <BoxView Style="{StaticResource FormDivider}" />
+                        <Label Text="Record what you saw, not what you were told. Photographs carry more weight than notes." Style="{StaticResource FormFieldInstruction}" />
+                    </VerticalStackLayout>
+                </controls:SubSectionControl>
+            </Grid>
+            <Grid ColumnDefinitions="940*,40*">
+                <controls:SubSectionControl Title="Access" Grid.Column="0">
+                    <VerticalStackLayout Padding="20,10">
+                        <VerticalStackLayout Spacing="5">
+                            <Label Text="Was access gained?" Style="{StaticResource FormFieldCaption}" />
+                            <Picker ItemsSource="{Binding Answers.AccessGainedOptions}"
+                                    SelectedItem="{Binding Answers.AccessGained}" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Spacing="5" IsVisible="{Binding ShowNoAccessReason}">
+                            <Label Text="Why was access refused?" Style="{StaticResource FormFieldCaption}" />
+                            <Editor Text="{Binding Answers.NoAccessReason}" HeightRequest="82" />
+                            <controls:FormFieldError Message="{Binding Answers.NoAccessReasonError}"
+                                                    IsArmed="{Binding Report.ShowValidationErrors}" />
+                        </VerticalStackLayout>
+                        <Grid ColumnDefinitions="620*,320*">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8"
+                                  MinimumHeightRequest="48" Grid.Column="0">
+                                <CheckBox IsChecked="{Binding Answers.OccupierPresent}" VerticalOptions="Center" />
+                                <Label Text="An occupier was present" Style="{StaticResource FormFieldCaption}"
+                                       Grid.Column="1" VerticalOptions="Center" />
+                            </Grid>
+                        </Grid>
+                    </VerticalStackLayout>
+                </controls:SubSectionControl>
+            </Grid>
+            <Grid ColumnDefinitions="940*,40*">
+                <VerticalStackLayout Grid.Column="0">
+                    <Grid ColumnDefinitions="200*,740*">
+                        <Button Text="Continue" Command="{Binding ContinueFromVisitCommand}"
+                                HorizontalOptions="Fill" Grid.Column="0" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Grid>
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

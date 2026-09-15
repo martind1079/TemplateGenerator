@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentView
+    x:Class="TemplateGenerator.App.Views.Controls.PhotoCaptureControl"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    x:Name="Root">
+
+    <Border Padding="0"
+            Stroke="{AppThemeBinding Light={StaticResource Border}, Dark={StaticResource BorderDark}}"
+            StrokeShape="RoundRectangle 8"
+            StrokeThickness="1">
+
+        <Grid BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource SurfaceAltDark}}">
+
+            <!--  The photograph, once there is one.  -->
+            <Image Aspect="AspectFill"
+                   IsVisible="{Binding HasPhoto, Source={x:Reference Root}}"
+                   Source="{Binding PhotoPath, Source={x:Reference Root}}" />
+
+            <!--  What an empty field looks like, so it reads as something to tap.  -->
+            <VerticalStackLayout HorizontalOptions="Center"
+                                 IsVisible="{Binding IsEmpty, Source={x:Reference Root}}"
+                                 Spacing="6"
+                                 VerticalOptions="Center">
+                <Border HeightRequest="34"
+                        HorizontalOptions="Center"
+                        Stroke="{AppThemeBinding Light={StaticResource Border}, Dark={StaticResource BorderDark}}"
+                        StrokeShape="RoundRectangle 6"
+                        StrokeThickness="1.5"
+                        WidthRequest="44">
+                    <Ellipse Fill="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource TextSecondaryDark}}"
+                             HeightRequest="14"
+                             HorizontalOptions="Center"
+                             VerticalOptions="Center"
+                             WidthRequest="14" />
+                </Border>
+                <Label HorizontalOptions="Center" Style="{StaticResource FormFieldInstruction}" Text="Add photo" />
+            </VerticalStackLayout>
+
+            <Grid.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnTapped" />
+            </Grid.GestureRecognizers>
+        </Grid>
+    </Border>
+
+</ContentView>

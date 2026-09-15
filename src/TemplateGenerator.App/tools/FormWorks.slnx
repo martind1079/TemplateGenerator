@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="FormWorks.Templates/FormWorks.Templates.csproj" />
+  <Project Path="FormWorks.Cli/FormWorks.Cli.csproj" />
+</Solution>

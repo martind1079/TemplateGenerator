@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentView
+    x:Class="TemplateGenerator.App.Views.FlyoutMenuView"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:models="clr-namespace:TemplateGenerator.App.Models"
+    xmlns:vm="clr-namespace:TemplateGenerator.App.ViewModels"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    x:DataType="vm:FlyoutMenuViewModel">
+
+    <Grid x:Name="MenuRoot"
+          BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAlt}, Dark={StaticResource SurfaceAltDark}}"
+          RowDefinitions="Auto,Auto,*,Auto">
+
+        <!--  Header  -->
+        <VerticalStackLayout Padding="20,24,20,16" Spacing="2">
+            <Label FontFamily="OpenSansSemibold" FontSize="17" Text="Template Generator" />
+            <Label Style="{StaticResource Subtle}" Text="Formworks JSON to .NET MAUI" />
+        </VerticalStackLayout>
+
+        <Label Grid.Row="1"
+               Margin="20,4,20,6"
+               Style="{StaticResource Overline}"
+               Text="Converted templates" />
+
+        <!--  Every template compiled into this build. Selecting one opens its first page.  -->
+        <CollectionView x:Name="TemplateList"
+                        Grid.Row="2"
+                        ItemsSource="{Binding Templates}"
+                        SelectedItem="{Binding SelectedTemplate, Mode=TwoWay}"
+                        SelectionChangedCommand="{Binding OpenTemplateCommand}"
+                        SelectionChangedCommandParameter="{Binding Source={x:Reference TemplateList}, Path=SelectedItem}"
+                        SelectionMode="Single">
+
+            <CollectionView.EmptyView>
+                <Label Margin="20,4"
+                       Style="{StaticResource Subtle}"
+                       Text="Nothing converted yet. Run scripts/convert, then rebuild." />
+            </CollectionView.EmptyView>
+
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="models:FormTemplateInfo">
+                    <Grid Padding="10,2">
+                        <Border Padding="10,9"
+                                BackgroundColor="Transparent"
+                                StrokeShape="RoundRectangle 8"
+                                StrokeThickness="0">
+                            <VisualStateManager.VisualStateGroups>
+                                <VisualStateGroupList>
+                                    <VisualStateGroup x:Name="CommonStates">
+                                        <VisualState x:Name="Normal" />
+                                        <VisualState x:Name="Selected">
+                                            <VisualState.Setters>
+                                                <Setter Property="BackgroundColor"
+                                                        Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                </VisualStateGroupList>
+                            </VisualStateManager.VisualStateGroups>
+
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                <Ellipse Margin="0,5,0,0"
+                                         Fill="{StaticResource Accent}"
+                                         HeightRequest="8"
+                                         VerticalOptions="Start"
+                                         WidthRequest="8" />
+
+                                <VerticalStackLayout Grid.Column="1" Spacing="1">
+                                    <Label FontSize="14" Text="{Binding Name}" />
+                                    <Label FontSize="12" Style="{StaticResource Subtle}" Text="{Binding PageSummary}" />
+                                </VerticalStackLayout>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <!--  Fixed destinations  -->
+        <VerticalStackLayout Grid.Row="3" Padding="10,8,10,20" Spacing="2">
+            <BoxView Margin="10,0,10,8"
+                     BackgroundColor="{AppThemeBinding Light={StaticResource Border}, Dark={StaticResource BorderDark}}"
+                     HeightRequest="1" />
+
+            <VerticalStackLayout BindableLayout.ItemsSource="{Binding MenuEntries}" Spacing="2">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="models:MenuEntry">
+                        <Border Padding="10,9"
+                                BackgroundColor="Transparent"
+                                StrokeShape="RoundRectangle 8"
+                                StrokeThickness="0">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding Source={x:Reference MenuRoot}, Path=BindingContext.OpenMenuEntryCommand}" CommandParameter="{Binding .}" />
+                            </Border.GestureRecognizers>
+
+                            <VerticalStackLayout Spacing="1">
+                                <Label FontSize="14" Text="{Binding Title}" />
+                                <Label FontSize="12" Style="{StaticResource Subtle}" Text="{Binding Subtitle}" />
+                            </VerticalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+        </VerticalStackLayout>
+    </Grid>
+
+</ContentView>

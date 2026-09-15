@@ -1,0 +1,467 @@
+{
+  "Form": {
+    "fieldType": "Form",
+    "id": 35,
+    "width": 980,
+    "title": "Property Survey",
+    "children": [
+      {
+        "Page": {
+          "fieldType": "Page",
+          "id": 14,
+          "width": 980,
+          "elementName": "Visit",
+          "name": "Visit",
+          "title": "Visit",
+          "children": [
+            {
+              "Section": {
+                "fieldType": "Section",
+                "id": 1,
+                "width": 940,
+                "elementName": "VisitDetails",
+                "name": "Visit.VisitDetails",
+                "title": "Visit details",
+                "children": [
+                  {
+                    "Text": {
+                      "fieldType": "Text",
+                      "id": 2,
+                      "width": 940,
+                      "elementName": "SurveyorName",
+                      "name": "Visit.VisitDetails.SurveyorName",
+                      "title": "Surveyor name",
+                      "scripts": {
+                        "OnValidate": "if this.value == \"\" then\n  this.valid = false;\n  this.message = \"The surveyor must be named.\";\nend"
+                      }
+                    }
+                  },
+                  {
+                    "Text": {
+                      "fieldType": "Text",
+                      "id": 3,
+                      "width": 940,
+                      "elementName": "PropertyReference",
+                      "name": "Visit.VisitDetails.PropertyReference",
+                      "title": "Property reference"
+                    }
+                  },
+                  {
+                    "Date": {
+                      "fieldType": "Date",
+                      "id": 4,
+                      "width": 940,
+                      "elementName": "VisitDate",
+                      "name": "Visit.VisitDetails.VisitDate",
+                      "title": "Date of visit"
+                    }
+                  },
+                  {
+                    "Time": {
+                      "fieldType": "Time",
+                      "id": 5,
+                      "width": 940,
+                      "elementName": "VisitTime",
+                      "name": "Visit.VisitDetails.VisitTime",
+                      "title": "Time of visit"
+                    }
+                  },
+                  {
+                    "Line": {
+                      "fieldType": "Line",
+                      "id": 6,
+                      "width": 940,
+                      "elementName": "Divider1",
+                      "name": "Visit.VisitDetails.Divider1",
+                      "title": ""
+                    }
+                  },
+                  {
+                    "Label": {
+                      "fieldType": "Label",
+                      "id": 7,
+                      "width": 940,
+                      "elementName": "Guidance",
+                      "name": "Visit.VisitDetails.Guidance",
+                      "title": "Record what you saw, not what you were told. Photographs carry more weight than notes."
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "Section": {
+                "fieldType": "Section",
+                "id": 8,
+                "width": 940,
+                "elementName": "Access",
+                "name": "Visit.Access",
+                "title": "Access",
+                "children": [
+                  {
+                    "SingleSelection": {
+                      "fieldType": "SingleSelection",
+                      "id": 9,
+                      "width": 940,
+                      "elementName": "AccessGained",
+                      "name": "Visit.Access.AccessGained",
+                      "title": "Was access gained?",
+                      "options": [
+                        {
+                          "Value": "Yes",
+                          "Content": "Yes"
+                        },
+                        {
+                          "Value": "No",
+                          "Content": "No"
+                        }
+                      ],
+                      "scripts": {
+                        "OnValueChange": "if this.value == \"No\" then\n  NoAccessReason.visible = true;\nelse\n  NoAccessReason.visible = false;\nend"
+                      }
+                    }
+                  },
+                  {
+                    "ParagraphText": {
+                      "fieldType": "ParagraphText",
+                      "id": 10,
+                      "width": 940,
+                      "elementName": "NoAccessReason",
+                      "name": "Visit.Access.NoAccessReason",
+                      "title": "Why was access refused?",
+                      "textLines": 3,
+                      "hidden": true,
+                      "scripts": {
+                        "OnValidate": "if this.value == \"\" and NoAccessReason.visible == true then\n  this.valid = false;\n  this.message = \"Say why access could not be gained.\";\nend"
+                      }
+                    }
+                  },
+                  {
+                    "Checkbox": {
+                      "fieldType": "Checkbox",
+                      "id": 11,
+                      "width": 620,
+                      "elementName": "OccupierPresent",
+                      "name": "Visit.Access.OccupierPresent",
+                      "title": "An occupier was present"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "Section": {
+                "fieldType": "Section",
+                "id": 12,
+                "width": 940,
+                "elementName": "Next",
+                "name": "Visit.Next",
+                "title": "",
+                "children": [
+                  {
+                    "Button": {
+                      "fieldType": "Button",
+                      "id": 13,
+                      "width": 200,
+                      "elementName": "ContinueFromVisit",
+                      "name": "Visit.Next.ContinueFromVisit",
+                      "title": "Continue",
+                      "scripts": {
+                        "OnTap": "if AccessGained.value == \"Yes\" then\n  form.changePage(\"Condition\");\nelse\n  form.changePage(\"Closure\");\nend"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "Page": {
+          "fieldType": "Page",
+          "id": 28,
+          "width": 980,
+          "elementName": "Condition",
+          "name": "Condition",
+          "title": "Condition",
+          "children": [
+            {
+              "Section": {
+                "fieldType": "Section",
+                "id": 15,
+                "width": 940,
+                "elementName": "PropertyCondition",
+                "name": "Condition.PropertyCondition",
+                "title": "Property condition",
+                "children": [
+                  {
+                    "Group": {
+                      "fieldType": "Group",
+                      "id": 16,
+                      "width": 460,
+                      "elementName": "Exterior",
+                      "name": "Condition.PropertyCondition.Exterior",
+                      "title": "Exterior",
+                      "children": [
+                        {
+                          "SingleSelection": {
+                            "fieldType": "SingleSelection",
+                            "id": 17,
+                            "width": 420,
+                            "elementName": "RoofCondition",
+                            "name": "Condition.PropertyCondition.RoofCondition",
+                            "title": "Roof",
+                            "options": [
+                              {
+                                "Value": "Good",
+                                "Content": "Good"
+                              },
+                              {
+                                "Value": "Fair",
+                                "Content": "Fair"
+                              },
+                              {
+                                "Value": "Poor",
+                                "Content": "Poor"
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "SingleSelection": {
+                            "fieldType": "SingleSelection",
+                            "id": 18,
+                            "width": 420,
+                            "elementName": "WindowsCondition",
+                            "name": "Condition.PropertyCondition.WindowsCondition",
+                            "title": "Windows",
+                            "options": [
+                              {
+                                "Value": "Good",
+                                "Content": "Good"
+                              },
+                              {
+                                "Value": "Fair",
+                                "Content": "Fair"
+                              },
+                              {
+                                "Value": "Poor",
+                                "Content": "Poor"
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "Group": {
+                      "fieldType": "Group",
+                      "id": 19,
+                      "width": 460,
+                      "elementName": "Interior",
+                      "name": "Condition.PropertyCondition.Interior",
+                      "title": "Interior",
+                      "children": [
+                        {
+                          "SingleSelection": {
+                            "fieldType": "SingleSelection",
+                            "id": 20,
+                            "width": 420,
+                            "elementName": "DampPresent",
+                            "name": "Condition.PropertyCondition.DampPresent",
+                            "title": "Signs of damp",
+                            "options": [
+                              {
+                                "Value": "None",
+                                "Content": "None"
+                              },
+                              {
+                                "Value": "Some",
+                                "Content": "Some"
+                              },
+                              {
+                                "Value": "Extensive",
+                                "Content": "Extensive"
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "Checkbox": {
+                            "fieldType": "Checkbox",
+                            "id": 21,
+                            "width": 420,
+                            "elementName": "HeatingWorks",
+                            "name": "Condition.PropertyCondition.HeatingWorks",
+                            "title": "Heating appears to work"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "ParagraphText": {
+                      "fieldType": "ParagraphText",
+                      "id": 22,
+                      "width": 940,
+                      "elementName": "ConditionNotes",
+                      "name": "Condition.PropertyCondition.ConditionNotes",
+                      "title": "Notes",
+                      "textLines": 4
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "Section": {
+                "fieldType": "Section",
+                "id": 23,
+                "width": 940,
+                "elementName": "Photographs",
+                "name": "Condition.Photographs",
+                "title": "Photographs",
+                "children": [
+                  {
+                    "Photo": {
+                      "fieldType": "Photo",
+                      "id": 24,
+                      "width": 460,
+                      "elementName": "FrontElevation",
+                      "name": "Condition.Photographs.FrontElevation",
+                      "title": "Front elevation",
+                      "contentHeight": 180
+                    }
+                  },
+                  {
+                    "Photo": {
+                      "fieldType": "Photo",
+                      "id": 25,
+                      "width": 460,
+                      "elementName": "RearElevation",
+                      "name": "Condition.Photographs.RearElevation",
+                      "title": "Rear elevation",
+                      "contentHeight": 180
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "Section": {
+                "fieldType": "Section",
+                "id": 26,
+                "width": 940,
+                "elementName": "Next",
+                "name": "Condition.Next",
+                "title": "",
+                "children": [
+                  {
+                    "Button": {
+                      "fieldType": "Button",
+                      "id": 27,
+                      "width": 200,
+                      "elementName": "ContinueFromCondition",
+                      "name": "Condition.Next.ContinueFromCondition",
+                      "title": "Continue",
+                      "scripts": {
+                        "OnTap": "form.changePage(\"Closure\");"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "Page": {
+          "fieldType": "Page",
+          "id": 34,
+          "width": 980,
+          "elementName": "Closure",
+          "name": "Closure",
+          "title": "Closure",
+          "children": [
+            {
+              "Section": {
+                "fieldType": "Section",
+                "id": 29,
+                "width": 940,
+                "elementName": "Completion",
+                "name": "Closure.Completion",
+                "title": "Completion",
+                "children": [
+                  {
+                    "SingleSelection": {
+                      "fieldType": "SingleSelection",
+                      "id": 30,
+                      "width": 940,
+                      "elementName": "Outcome",
+                      "name": "Closure.Completion.Outcome",
+                      "title": "Visit outcome",
+                      "options": [
+                        {
+                          "Value": "Survey completed",
+                          "Content": "Survey completed"
+                        },
+                        {
+                          "Value": "Access refused",
+                          "Content": "Access refused"
+                        },
+                        {
+                          "Value": "Property vacant",
+                          "Content": "Property vacant"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "ParagraphText": {
+                      "fieldType": "ParagraphText",
+                      "id": 31,
+                      "width": 940,
+                      "elementName": "Recommendation",
+                      "name": "Closure.Completion.Recommendation",
+                      "title": "Recommendation",
+                      "textLines": 3,
+                      "scripts": {
+                        "OnValidate": "if this.value == \"\" and Outcome.value == \"Survey completed\" then\n  this.valid = false;\n  this.message = \"A completed survey needs a recommendation.\";\nend"
+                      }
+                    }
+                  },
+                  {
+                    "Text": {
+                      "fieldType": "Text",
+                      "id": 32,
+                      "width": 940,
+                      "elementName": "SignedBy",
+                      "name": "Closure.Completion.SignedBy",
+                      "title": "Signed by",
+                      "scripts": {
+                        "OnValidate": "if this.value == \"\" then\n  this.valid = false;\n  this.message = \"The report must be signed.\";\nend"
+                      }
+                    }
+                  },
+                  {
+                    "Checkbox": {
+                      "fieldType": "Checkbox",
+                      "id": 33,
+                      "width": 620,
+                      "elementName": "ReadyToSubmit",
+                      "name": "Closure.Completion.ReadyToSubmit",
+                      "title": "I confirm this report is complete"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

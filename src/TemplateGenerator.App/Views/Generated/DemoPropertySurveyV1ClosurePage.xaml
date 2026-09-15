@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Generated from Demo Property Survey V1, page Closure. Do not edit. -->
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:controls="clr-namespace:TemplateGenerator.App.Views.Controls"
+             xmlns:viewModels="clr-namespace:TemplateGenerator.App.ViewModels.Generated"
+             x:Class="TemplateGenerator.App.Views.Generated.DemoPropertySurveyV1ClosurePage"
+             x:DataType="viewModels:DemoPropertySurveyV1ClosurePageViewModel"
+             Title="Closure">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="20">
+
+            <!-- Which pages this report will pass through, given the answers so far. -->
+            <controls:FormStepSelectorControl Steps="{Binding Steps}"
+                                             StepCommand="{Binding GoToStepCommand}" />
+
+            <Grid ColumnDefinitions="940*,40*">
+                <controls:SubSectionControl Title="Completion" Grid.Column="0">
+                    <VerticalStackLayout Padding="20,10">
+                        <VerticalStackLayout Spacing="5">
+                            <Label Text="Visit outcome" Style="{StaticResource FormFieldCaption}" />
+                            <Picker ItemsSource="{Binding Answers.OutcomeOptions}"
+                                    SelectedItem="{Binding Answers.Outcome}" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Spacing="5">
+                            <Label Text="Recommendation" Style="{StaticResource FormFieldCaption}" />
+                            <Editor Text="{Binding Answers.Recommendation}" HeightRequest="82" />
+                            <controls:FormFieldError Message="{Binding Answers.RecommendationError}"
+                                                    IsArmed="{Binding Report.ShowValidationErrors}" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Spacing="5">
+                            <Label Text="Signed by" Style="{StaticResource FormFieldCaption}" />
+                            <Entry Text="{Binding Answers.SignedBy}" />
+                            <controls:FormFieldError Message="{Binding Answers.SignedByError}"
+                                                    IsArmed="{Binding Report.ShowValidationErrors}" />
+                        </VerticalStackLayout>
+                        <Grid ColumnDefinitions="620*,320*">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8"
+                                  MinimumHeightRequest="48" Grid.Column="0">
+                                <CheckBox IsChecked="{Binding Answers.ReadyToSubmit}" VerticalOptions="Center" />
+                                <Label Text="I confirm this report is complete" Style="{StaticResource FormFieldCaption}"
+                                       Grid.Column="1" VerticalOptions="Center" />
+                            </Grid>
+                        </Grid>
+                    </VerticalStackLayout>
+                </controls:SubSectionControl>
+            </Grid>
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

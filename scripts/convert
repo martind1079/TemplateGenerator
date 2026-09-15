@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+#
+# Convert Formworks templates into the app, then rebuild so the forms can be opened.
+#
+# Generated XAML is compiled, so conversion is a build step rather than something the
+# running app can do. This is the whole loop.
+#
+#   scripts/convert "Occupancy Report V18"
+#   scripts/convert "Agent Visits V3" "Occupancy Report V18"
+#   scripts/convert --all-latest
+#   scripts/convert --ios "Occupancy Report V18"
+#   scripts/convert --no-build "Agent Visits V3"
+#   scripts/convert --estate ~/somewhere "Some Survey V4"
+#
+# Templates are read from this repository's templates/ folder, or from --estate.
+
+set -euo pipefail
+
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+app="$root/src/TemplateGenerator.App"
+cli="$app/tools/FormWorks.Cli"
+namespace="TemplateGenerator.App"
+framework="net10.0-maccatalyst"
+templates="$root/templates"
+
+build=1
+all_latest=0
+names=()
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --estate)     templates="$2"; shift 2 ;;
+        --no-build)   build=0; shift ;;
+        --ios)        framework="net10.0-ios"; shift ;;
+        --all-latest) all_latest=1; shift ;;
+        -h|--help)    awk 'NR>2 && /^#/ { sub(/^# ?/, ""); print; next } NR>2 { exit }' \
+                          "${BASH_SOURCE[0]}"; exit 0 ;;
+        *)            names+=("$1"); shift ;;
+    esac
+done
+
+if [[ $all_latest -eq 0 && ${#names[@]} -eq 0 ]]; then
+    echo "Name at least one template, or pass --all-latest. See --help." >&2
+    exit 1
+fi
+
+formworks() { dotnet run --project "$cli" --verbosity quiet -- "$@"; }
+
+convert() {
+    local name="$1"
+    echo "== $name"
+
+    # --isolate names the generated classes after the template. Without it, two templates
+    # sharing a page name overwrite each other's pages.
+    formworks generate --template "$name" --all-pages --isolate \
+        --app "$app" --namespace "$namespace" --estate "$templates"
+}
+
+if [[ $all_latest -eq 1 ]]; then
+    # One at a time, because a template is emitted whole or not at all.
+    while IFS= read -r name; do
+        [[ -n "$name" ]] && convert "$name"
+    done < <(formworks list --latest --estate "$templates" | sed -n 's/^\* //p')
+fi
+
+for name in "${names[@]:-}"; do
+    [[ -n "$name" ]] && convert "$name"
+done
+
+if [[ $build -eq 1 ]]; then
+    echo
+    echo "== building $framework"
+    dotnet build "$app/TemplateGenerator.App.csproj" -f "$framework" --verbosity quiet
+fi

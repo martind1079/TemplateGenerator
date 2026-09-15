@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="TemplateGenerator.App.Views.Controls.FormStepSelectorControl"
+             xmlns:models="clr-namespace:TemplateGenerator.App.Models.JobForms"
+             x:Name="Root">
+
+    <Border Stroke="{AppThemeBinding Light={StaticResource Border}, Dark={StaticResource BorderDark}}"
+            StrokeThickness="1"
+            Padding="10"
+            StrokeShape="RoundRectangle 8">
+
+        <!-- Wraps rather than scrolls. A horizontal ScrollView nested inside the
+             page's vertical one measures to nothing on iOS, and wrapping is the
+             better answer for a 16-page form anyway. -->
+        <FlexLayout x:Name="StepsHost"
+                    Direction="Row"
+                    Wrap="Wrap"
+                    JustifyContent="Start"
+                    AlignItems="Center">
+            <BindableLayout.ItemTemplate>
+                <DataTemplate x:DataType="models:FormStep">
+                    <!-- DataTriggers rather than converters: the values are Colors,
+                         and a converter with an object-typed TrueValue would hand
+                         the binding a string. -->
+                    <Button Text="{Binding ShortTitle}"
+                            FontSize="13"
+                            Padding="14,0"
+                            HeightRequest="36"
+                            MinimumHeightRequest="36"
+                            Margin="0,4,8,4"
+                            IsEnabled="{Binding IsEnabled}"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAlt}, Dark={StaticResource SurfaceAltDark}}"
+                            TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource TextPrimaryDark}}"
+                            Clicked="OnStepClicked">
+                        <Button.Triggers>
+                            <!-- The page the agent is on -->
+                            <DataTrigger TargetType="Button"
+                                         Binding="{Binding IsCurrent}"
+                                         Value="True">
+                                <Setter Property="BackgroundColor" Value="{StaticResource Primary}" />
+                                <Setter Property="TextColor" Value="{StaticResource White}" />
+                                <Setter Property="FontAttributes" Value="Bold" />
+                            </DataTrigger>
+
+                            <!-- Answered, but not the current page -->
+                            <MultiTrigger TargetType="Button">
+                                <MultiTrigger.Conditions>
+                                    <BindingCondition Binding="{Binding IsComplete}" Value="True" />
+                                    <BindingCondition Binding="{Binding IsCurrent}" Value="False" />
+                                </MultiTrigger.Conditions>
+                                <Setter Property="BackgroundColor" Value="{StaticResource PrimaryLight}" />
+                            </MultiTrigger>
+
+                            <!-- Not reachable yet -->
+                            <DataTrigger TargetType="Button"
+                                         Binding="{Binding IsEnabled}"
+                                         Value="False">
+                                <Setter Property="Opacity" Value="0.35" />
+                            </DataTrigger>
+                        </Button.Triggers>
+                    </Button>
+                </DataTemplate>
+            </BindableLayout.ItemTemplate>
+        </FlexLayout>
+    </Border>
+
+</ContentView>

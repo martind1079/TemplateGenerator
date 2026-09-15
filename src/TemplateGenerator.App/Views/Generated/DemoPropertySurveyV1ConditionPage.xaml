@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Generated from Demo Property Survey V1, page Condition. Do not edit. -->
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:controls="clr-namespace:TemplateGenerator.App.Views.Controls"
+             xmlns:viewModels="clr-namespace:TemplateGenerator.App.ViewModels.Generated"
+             x:Class="TemplateGenerator.App.Views.Generated.DemoPropertySurveyV1ConditionPage"
+             x:DataType="viewModels:DemoPropertySurveyV1ConditionPageViewModel"
+             Title="Condition">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="20">
+
+            <!-- Which pages this report will pass through, given the answers so far. -->
+            <controls:FormStepSelectorControl Steps="{Binding Steps}"
+                                             StepCommand="{Binding GoToStepCommand}" />
+
+            <Grid ColumnDefinitions="940*,40*">
+                <controls:SubSectionControl Title="Property condition" Grid.Column="0">
+                    <VerticalStackLayout Padding="20,10">
+                        <Grid ColumnDefinitions="460*,460*,20*">
+                            <controls:SubSectionControl Title="Exterior" Grid.Column="0">
+                                <VerticalStackLayout Padding="20,10">
+                                    <Grid ColumnDefinitions="420*,40*">
+                                        <VerticalStackLayout Spacing="5" Grid.Column="0">
+                                            <Label Text="Roof" Style="{StaticResource FormFieldCaption}" />
+                                            <Picker ItemsSource="{Binding Answers.RoofConditionOptions}"
+                                                    SelectedItem="{Binding Answers.RoofCondition}" />
+                                        </VerticalStackLayout>
+                                    </Grid>
+                                    <Grid ColumnDefinitions="420*,40*">
+                                        <VerticalStackLayout Spacing="5" Grid.Column="0">
+                                            <Label Text="Windows" Style="{StaticResource FormFieldCaption}" />
+                                            <Picker ItemsSource="{Binding Answers.WindowsConditionOptions}"
+                                                    SelectedItem="{Binding Answers.WindowsCondition}" />
+                                        </VerticalStackLayout>
+                                    </Grid>
+                                </VerticalStackLayout>
+                            </controls:SubSectionControl>
+                            <controls:SubSectionControl Title="Interior" Grid.Column="1">
+                                <VerticalStackLayout Padding="20,10">
+                                    <Grid ColumnDefinitions="420*,40*">
+                                        <VerticalStackLayout Spacing="5" Grid.Column="0">
+                                            <Label Text="Signs of damp" Style="{StaticResource FormFieldCaption}" />
+                                            <Picker ItemsSource="{Binding Answers.DampPresentOptions}"
+                                                    SelectedItem="{Binding Answers.DampPresent}" />
+                                        </VerticalStackLayout>
+                                    </Grid>
+                                    <Grid ColumnDefinitions="420*,40*">
+                                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8"
+                                              MinimumHeightRequest="48" Grid.Column="0">
+                                            <CheckBox IsChecked="{Binding Answers.HeatingWorks}" VerticalOptions="Center" />
+                                            <Label Text="Heating appears to work" Style="{StaticResource FormFieldCaption}"
+                                                   Grid.Column="1" VerticalOptions="Center" />
+                                        </Grid>
+                                    </Grid>
+                                </VerticalStackLayout>
+                            </controls:SubSectionControl>
+                        </Grid>
+                        <VerticalStackLayout Spacing="5">
+                            <Label Text="Notes" Style="{StaticResource FormFieldCaption}" />
+                            <Editor Text="{Binding Answers.ConditionNotes}" HeightRequest="104" />
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </controls:SubSectionControl>
+            </Grid>
+            <Grid ColumnDefinitions="940*,40*">
+                <controls:SubSectionControl Title="Photographs" Grid.Column="0">
+                    <VerticalStackLayout Padding="20,10">
+                        <Grid ColumnDefinitions="460*,460*,20*">
+                            <VerticalStackLayout Spacing="5" Grid.Column="0">
+                                <Label Text="Front elevation" Style="{StaticResource FormFieldCaption}" />
+                                <controls:PhotoCaptureControl PhotoPath="{Binding Answers.FrontElevation}" HeightRequest="180" />
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Spacing="5" Grid.Column="1">
+                                <Label Text="Rear elevation" Style="{StaticResource FormFieldCaption}" />
+                                <controls:PhotoCaptureControl PhotoPath="{Binding Answers.RearElevation}" HeightRequest="180" />
+                            </VerticalStackLayout>
+                        </Grid>
+                    </VerticalStackLayout>
+                </controls:SubSectionControl>
+            </Grid>
+            <Grid ColumnDefinitions="940*,40*">
+                <VerticalStackLayout Grid.Column="0">
+                    <Grid ColumnDefinitions="200*,740*">
+                        <Button Text="Continue" Command="{Binding ContinueFromConditionCommand}"
+                                HorizontalOptions="Fill" Grid.Column="0" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Grid>
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

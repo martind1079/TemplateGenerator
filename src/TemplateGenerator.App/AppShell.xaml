@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="TemplateGenerator.App.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:views="clr-namespace:TemplateGenerator.App.Views"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Template Generator"
+    FlyoutBackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAlt}, Dark={StaticResource SurfaceAltDark}}"
+    FlyoutBehavior="Flyout"
+    FlyoutWidth="300">
+
+    <!--  The retractable side menu: converted templates plus fixed destinations.  -->
+    <Shell.FlyoutContent>
+        <views:FlyoutMenuView />
+    </Shell.FlyoutContent>
+
+    <ShellContent ContentTemplate="{DataTemplate views:TemplateListPage}" Route="templates" />
+    <ShellContent ContentTemplate="{DataTemplate views:AboutPage}" Route="about" />
+
+</Shell>

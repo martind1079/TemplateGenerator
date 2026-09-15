@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentView
+    x:Class="TemplateGenerator.App.Views.Controls.SubSectionControl"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    x:Name="Root">
+
+    <!--
+        Explicitly Content, not an implicit child: [ContentProperty] points implicit
+        children at SubSectionContent, so the control's own chrome would otherwise be
+        assigned as its content and bind into itself.
+    -->
+    <ContentView.Content>
+        <Border Style="{StaticResource FormSubSectionCard}">
+            <Grid RowDefinitions="Auto,Auto">
+
+                <Border Padding="12,8"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAlt}, Dark={StaticResource SurfaceAltDark}}"
+                        StrokeShape="RoundRectangle 10,10,0,0"
+                        StrokeThickness="0">
+                    <Label Style="{StaticResource FormSubSectionHeading}"
+                           Text="{Binding Title, Source={x:Reference Root}}" />
+                </Border>
+
+                <ContentView Grid.Row="1"
+                             Padding="0"
+                             Content="{Binding SubSectionContent, Source={x:Reference Root}}" />
+            </Grid>
+        </Border>
+    </ContentView.Content>
+
+</ContentView>
