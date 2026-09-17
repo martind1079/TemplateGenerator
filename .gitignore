@@ -500,8 +500,10 @@ src/TemplateGenerator.App/Models/Generated/*
 src/TemplateGenerator.App/ViewModels/Generated/*
 !src/TemplateGenerator.App/ViewModels/Generated/Demo*
 
-# The hand-written halves of generated view models carry client business rules too.
-src/TemplateGenerator.App/ViewModels/*PageViewModel.cs
+# The hand-written halves of generated view models carry client business rules too. **
+# rather than * so this also catches one written into a per-template subfolder
+# (ViewModels/<Template>/*PageViewModel.cs), not just one flat in ViewModels/ itself.
+src/TemplateGenerator.App/ViewModels/**/*PageViewModel.cs
 !src/TemplateGenerator.App/ViewModels/Demo*PageViewModel.cs
 
 # Newer templates land in Generated/<template>/Views|Models|ViewModels instead of scattering

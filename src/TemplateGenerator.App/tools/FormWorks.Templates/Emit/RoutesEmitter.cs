@@ -14,18 +14,18 @@ namespace FormWorks.Templates.Emit;
 public static class RoutesEmitter
 {
     public static string EmitRegistrations(
-        TemplateDocument doc, IReadOnlyList<PageEmitModel> pages, string rootNamespace, string className,
+        TemplateDocument doc, IReadOnlyList<PageEmitModel> pages, HouseStyle style, string className,
         string reportClassName, string? templateName = null)
     {
         var sb = new StringBuilder();
         Header(sb, doc);
 
         sb.AppendLine("using Microsoft.Extensions.DependencyInjection;");
-        sb.AppendLine($"using {rootNamespace}.Models.Generated;");
-        sb.AppendLine($"using {rootNamespace}.Services;");
-        sb.AppendLine($"using {rootNamespace}.ViewModels.Generated;");
+        sb.AppendLine($"using {style.ModelsNamespace};");
+        sb.AppendLine($"using {style.ServicesNamespace};");
+        sb.AppendLine($"using {style.ViewModelsNamespace};");
         sb.AppendLine();
-        sb.AppendLine($"namespace {rootNamespace}.Views.Generated;");
+        sb.AppendLine($"namespace {style.ViewsNamespace};");
         sb.AppendLine();
         sb.AppendLine("/// <summary>");
         sb.AppendLine($"/// Routes and registrations for {Escape(doc.FolderName)}.");

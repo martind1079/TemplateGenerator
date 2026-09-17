@@ -15,8 +15,18 @@ public sealed record ConversionRequest
     /// <summary>
     /// The root namespace of the app being generated into. Required: there is no sensible
     /// default, and a plausible wrong one produces output that will not compile.
+    ///
+    /// Used to build a default <see cref="HouseStyle"/> when none is given - this app's own
+    /// shape, which is what every emitter assumed before a house style could override it.
     /// </summary>
     public required string RootNamespace { get; init; }
+
+    /// <summary>
+    /// What generated code has to look like to belong in the target app. Null means the
+    /// converter's own app: <see cref="Emit.HouseStyle.Default"/> applied to
+    /// <see cref="RootNamespace"/>.
+    /// </summary>
+    public HouseStyle? HouseStyle { get; init; }
 
     /// <summary>Overrides the class-name stem derived from the template's family and version.</summary>
     public string Prefix { get; init; } = "";
@@ -135,6 +145,7 @@ public static class TemplateConverter
         var doc = request.Document;
         var app = request.AppDirectory;
         var vocabulary = request.Vocabulary;
+        var style = request.HouseStyle ?? HouseStyle.Default(request.RootNamespace);
 
         var wholeTemplate = request.Pages.Count == 0;
         var pages = wholeTemplate
@@ -193,7 +204,7 @@ public static class TemplateConverter
             .ToList();
 
         var state = VisibilityEmitter.Emit(
-            doc, models, VisibilityTable.Build(doc), request.RootNamespace, visibilityClass, reportClass);
+            doc, models, VisibilityTable.Build(doc), style, visibilityClass, reportClass);
 
         for (var i = 0; i < models.Count; i++)
             models[i] = models[i] with { StateNames = VisibilityEmitter.StateNames(models[i], state) };
@@ -204,7 +215,7 @@ public static class TemplateConverter
         foreach (var model in models)
         {
             converted.Add(EmitPage(
-                model, request, keys, written, family,
+                model, request, style, keys, written, family,
                 reportClass, navigatorClass, validatorClass, routedActions, visibilityClass, computedClass));
         }
 
@@ -231,28 +242,28 @@ public static class TemplateConverter
 
         var routesClass = request.Prefix.Length > 0 ? $"{request.Prefix}FormRoutes" : $"{family}Routes";
 
-        Write(written, app, family, "Views", $"{routesClass}.g.cs",
-            RoutesEmitter.EmitRegistrations(doc, models, request.RootNamespace, routesClass, reportClass, doc.FolderName));
+        Write(written, app, family, style.ViewsFolder, $"{routesClass}.g.cs",
+            RoutesEmitter.EmitRegistrations(doc, models, style, routesClass, reportClass, doc.FolderName));
 
-        Write(written, app, family, "Models", $"{reportClass}.g.cs",
-            ReportEmitter.Emit(doc, models, request.RootNamespace, reportClass, vocabulary));
+        Write(written, app, family, style.ModelsFolder, $"{reportClass}.g.cs",
+            ReportEmitter.Emit(doc, models, style, reportClass, vocabulary));
 
         var navigator = NavigatorEmitter.Emit(
-            doc, models, routes, request.RootNamespace, navigatorClass, reportClass);
+            doc, models, routes, style, navigatorClass, reportClass);
 
         var validator = ValidatorEmitter.Emit(
-            doc, models, validation, request.RootNamespace, validatorClass, reportClass, visibilityClass);
+            doc, models, validation, style, validatorClass, reportClass, visibilityClass);
 
         var computed = ComputedEmitter.Emit(
             doc, models, ComputedValueTable.Build(doc), state.Cleared,
-            request.RootNamespace, computedClass, reportClass);
+            style, computedClass, reportClass);
 
-        Write(written, app, family, "Views", $"{validatorClass}.g.cs", validator.Code);
-        Write(written, app, family, "Views", $"{visibilityClass}.g.cs", state.Code);
-        Write(written, app, family, "Views", $"{computedClass}.g.cs", computed.Code);
-        Write(written, app, family, "Views", $"{navigatorClass}.g.cs", navigator.Code);
+        Write(written, app, family, style.ViewsFolder, $"{validatorClass}.g.cs", validator.Code);
+        Write(written, app, family, style.ViewsFolder, $"{visibilityClass}.g.cs", state.Code);
+        Write(written, app, family, style.ViewsFolder, $"{computedClass}.g.cs", computed.Code);
+        Write(written, app, family, style.ViewsFolder, $"{navigatorClass}.g.cs", navigator.Code);
 
-        var remaining = Write(written, app, family, "Views", $"{family}.Remaining.md",
+        var remaining = Write(written, app, family, style.ViewsFolder, $"{family}.Remaining.md",
             RemainingWorkEmitter.Emit(doc, validation, validator, state, computed, models));
 
         return result with
@@ -272,17 +283,15 @@ public static class TemplateConverter
     }
 
     private static ConvertedPage EmitPage(
-        PageEmitModel model, ConversionRequest request, IReadOnlySet<string> keys, List<string> written,
-        string family, string reportClass, string navigatorClass, string validatorClass,
+        PageEmitModel model, ConversionRequest request, HouseStyle style, IReadOnlySet<string> keys,
+        List<string> written, string family, string reportClass, string navigatorClass, string validatorClass,
         IReadOnlySet<string> routedActions, string visibilityClass, string computedClass)
     {
-        var ns = request.RootNamespace;
-
-        var xaml = XamlEmitter.EmitPage(model, ns);
-        var codeBehind = XamlEmitter.EmitCodeBehind(model, ns);
-        var answers = ModelEmitter.EmitAnswers(model, ns, model.Validated);
+        var xaml = XamlEmitter.EmitPage(model, style);
+        var codeBehind = XamlEmitter.EmitCodeBehind(model, style);
+        var answers = ModelEmitter.EmitAnswers(model, style, model.Validated);
         var viewModel = ModelEmitter.EmitViewModel(
-            model, ns, reportClass, navigatorClass, validatorClass, routedActions, visibilityClass, computedClass);
+            model, style, reportClass, navigatorClass, validatorClass, routedActions, visibilityClass, computedClass);
 
         var problems = EmitVerifier.Verify(model, xaml, answers, keys);
 
@@ -293,25 +302,26 @@ public static class TemplateConverter
         if (problems.Count > 0 || request.DryRun) return page;
 
         var app = request.AppDirectory;
-        Write(written, app, family, "Views", $"{model.ClassName}.xaml", xaml);
-        Write(written, app, family, "Views", $"{model.ClassName}.xaml.cs", codeBehind);
-        Write(written, app, family, "Models", $"{model.AnswersClassName}.g.cs", answers);
-        Write(written, app, family, "ViewModels", $"{model.ClassName}ViewModel.g.cs", viewModel);
+        Write(written, app, family, style.ViewsFolder, $"{model.ClassName}.xaml", xaml);
+        Write(written, app, family, style.ViewsFolder, $"{model.ClassName}.xaml.cs", codeBehind);
+        Write(written, app, family, style.ModelsFolder, $"{model.AnswersClassName}.g.cs", answers);
+        Write(written, app, family, style.ViewModelsFolder, $"{model.ClassName}ViewModel.g.cs", viewModel);
 
         return page;
     }
 
     /// <summary>
-    /// Everything a template emits lands together under Generated/&lt;template&gt;, grouped by
-    /// area beneath that - not scattered across Views/Generated, Models/Generated and
-    /// ViewModels/Generated, where every template's output piles into the same three folders.
-    /// Namespaces are unchanged by this: reflection finds a template by its namespace, not
-    /// where its files sit on disk.
+    /// Where a file lands is the house style's call, not this app's own habit of grouping by
+    /// template under Generated/&lt;template&gt;/&lt;area&gt; - a different host app may instead
+    /// group every template's pages into one shared folder alongside its hand-written ones.
+    /// Namespaces are unchanged by this either way: reflection finds a template by its
+    /// namespace, not where its files sit on disk.
     /// </summary>
     private static string Write(
-        List<string> written, string app, string family, string area, string fileName, string content)
+        List<string> written, string app, string family, string folderTemplate, string fileName, string content)
     {
-        var path = Path.Combine(app, "Generated", family, area, fileName);
+        var folder = folderTemplate.Replace("{family}", family);
+        var path = Path.Combine(app, folder, fileName);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.WriteAllText(path, content);
         written.Add(path);

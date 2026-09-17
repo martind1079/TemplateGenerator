@@ -15,7 +15,7 @@ namespace FormWorks.Templates.Emit;
 public static class ReportEmitter
 {
     public static string Emit(
-        TemplateDocument doc, IReadOnlyList<PageEmitModel> pages, string rootNamespace, string className,
+        TemplateDocument doc, IReadOnlyList<PageEmitModel> pages, HouseStyle style, string className,
         ControlVocabulary vocabulary)
     {
         var sb = new StringBuilder();
@@ -28,9 +28,9 @@ public static class ReportEmitter
         sb.AppendLine("using System.Globalization;");
         sb.AppendLine("using System.Text.Json.Serialization;");
         sb.AppendLine("using CommunityToolkit.Mvvm.ComponentModel;");
-        sb.AppendLine($"using {rootNamespace}.Models.Forms;");
+        sb.AppendLine($"using {style.FormsNamespace};");
         sb.AppendLine();
-        sb.AppendLine($"namespace {rootNamespace}.Models.Generated;");
+        sb.AppendLine($"namespace {style.ModelsNamespace};");
         sb.AppendLine();
         sb.AppendLine("/// <summary>");
         sb.AppendLine($"/// Every answer on a {Escape(doc.FolderName)} report.");

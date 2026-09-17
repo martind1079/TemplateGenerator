@@ -7,7 +7,7 @@ namespace FormWorks.Templates.Emit;
 public static class ModelEmitter
 {
     public static string EmitAnswers(
-        PageEmitModel page, string rootNamespace, IReadOnlySet<string>? validated = null)
+        PageEmitModel page, HouseStyle style, IReadOnlySet<string>? validated = null)
     {
         var sb = new StringBuilder();
         Header(sb, page);
@@ -15,7 +15,7 @@ public static class ModelEmitter
         sb.AppendLine("using System.Text.Json.Serialization;");
         sb.AppendLine("using CommunityToolkit.Mvvm.ComponentModel;");
         sb.AppendLine();
-        sb.AppendLine($"namespace {rootNamespace}.Models.Generated;");
+        sb.AppendLine($"namespace {style.ModelsNamespace};");
         sb.AppendLine();
         sb.AppendLine("/// <summary>");
         sb.AppendLine($"/// Answers for the {page.PageName} page of {Escape(page.Document.FolderName)}.");
@@ -217,7 +217,7 @@ public static class ModelEmitter
     }
 
     public static string EmitViewModel(
-        PageEmitModel page, string rootNamespace, string reportClassName, string navigatorClassName,
+        PageEmitModel page, HouseStyle style, string reportClassName, string navigatorClassName,
         string validatorClassName, IReadOnlySet<string> routedActions,
         string? visibilityClassName = null,
         string? computedClassName = null)
@@ -227,20 +227,22 @@ public static class ModelEmitter
 
         sb.AppendLine("using System.Collections.ObjectModel;");
         sb.AppendLine("using CommunityToolkit.Mvvm.ComponentModel;");
-        sb.AppendLine($"using {rootNamespace}.Models.Generated;");
+        if (style.ViewModelBaseClassNamespace is not null)
+            sb.AppendLine($"using {style.ViewModelBaseClassNamespace};");
+        sb.AppendLine($"using {style.ModelsNamespace};");
         // The type alone, not the namespace: the POC's own answer classes live there and
         // share names with the generated ones.
-        sb.AppendLine($"using FormStep = {rootNamespace}.Models.JobForms.FormStep;");
-        sb.AppendLine($"using {rootNamespace}.Services;");
-        sb.AppendLine($"using {rootNamespace}.Views.Generated;");
+        sb.AppendLine($"using FormStep = {style.JobFormsNamespace}.FormStep;");
+        sb.AppendLine($"using {style.ServicesNamespace};");
+        sb.AppendLine($"using {style.ViewsNamespace};");
         sb.AppendLine();
-        sb.AppendLine($"namespace {rootNamespace}.ViewModels.Generated;");
+        sb.AppendLine($"namespace {style.ViewModelsNamespace};");
         sb.AppendLine();
         sb.AppendLine("/// <summary>");
         sb.AppendLine("/// Generated half of the page's view model. Hand-written logic belongs in the other");
         sb.AppendLine("/// half of this partial class, in a file the generator never touches.");
         sb.AppendLine("/// </summary>");
-        sb.AppendLine($"public partial class {page.ClassName}ViewModel : ObservableObject");
+        sb.AppendLine($"public partial class {page.ClassName}ViewModel : {style.ViewModelBaseClass}");
         sb.AppendLine("{");
         sb.AppendLine($"    private readonly IFormStore<{reportClassName}> _store;");
         sb.AppendLine();

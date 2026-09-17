@@ -44,7 +44,7 @@ public static class ComputedEmitter
         IReadOnlyList<PageEmitModel> pages,
         ComputedValueReport computed,
         IReadOnlySet<string> clearedOnHide,
-        string rootNamespace,
+        HouseStyle style,
         string className,
         string reportClassName)
     {
@@ -116,9 +116,9 @@ public static class ComputedEmitter
         sb.AppendLine("// </auto-generated>");
         sb.AppendLine("#nullable enable");
         sb.AppendLine();
-        sb.AppendLine($"using {rootNamespace}.Models.Generated;");
+        sb.AppendLine($"using {style.ModelsNamespace};");
         sb.AppendLine();
-        sb.AppendLine($"namespace {rootNamespace}.Views.Generated;");
+        sb.AppendLine($"namespace {style.ViewsNamespace};");
         sb.AppendLine();
         sb.AppendLine("/// <summary>");
         sb.AppendLine($"/// Answers a {GuardRenderer.Escape(doc.FolderName)} report fills in for the agent.");

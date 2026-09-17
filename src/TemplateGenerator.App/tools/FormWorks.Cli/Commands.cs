@@ -29,17 +29,20 @@ public static class Commands
               shapes     [--event E]     handlers grouped by shape, most repeated first
               repeats    --template T    field names differing only by an index
               generate   --template T --app DIR --namespace N [--all-pages | --page P]
-                         [--isolate]
+                         [--isolate] [--house-style FILE]
                                          emit a template: pages, answers, view models,
                                          the report, the navigator and the registrations
 
             Options
-              --estate <path>   template folder (default: the nearest templates/ folder)
-              --latest          only the highest version of each family
-              --top <n>         limit long listings (default 20)
-              --full            print whole script bodies rather than a first line
-              --isolate         name generated classes after the template, so an app can
-                                hold several without their pages colliding
+              --estate <path>       template folder (default: the nearest templates/ folder)
+              --latest              only the highest version of each family
+              --top <n>             limit long listings (default 20)
+              --full                print whole script bodies rather than a first line
+              --isolate             name generated classes after the template, so an app can
+                                    hold several without their pages colliding
+              --house-style <file>  a JSON HouseStyle: what a different host app needs
+                                    generated code to look like (base classes, namespaces,
+                                    where files land). Omit it to emit this app's own shape.
             """);
         return 0;
     }
@@ -220,6 +223,7 @@ public static class Commands
             AppDirectory = app,
             RootNamespace = args.Value("namespace")
                             ?? throw new ArgumentException("Pass --namespace <the app's root namespace>."),
+            HouseStyle = LoadHouseStyle(args),
             Prefix = args.Value("prefix")
                      ?? (args.Has("isolate") ? TemplateConverter.PrefixFor(doc) : ""),
             Pages = args.Has("all-pages") ? [] : [args.Value("page") ?? ""],
@@ -228,6 +232,33 @@ public static class Commands
 
         Report(result, args);
         return result.Succeeded ? 0 : 1;
+    }
+
+    /// <summary>
+    /// What a different host app needs generated code to look like, read from JSON so one
+    /// house style can be written once and reused across every template going into that app.
+    /// Absent --house-style, the converter falls back to its own app's shape.
+    /// </summary>
+    private static HouseStyle? LoadHouseStyle(Args args)
+    {
+        var path = args.Value("house-style");
+        if (path is null) return null;
+
+        if (!File.Exists(path))
+            throw new ArgumentException($"No house style at '{path}'.");
+
+        var json = File.ReadAllText(path);
+
+        try
+        {
+            return System.Text.Json.JsonSerializer.Deserialize<HouseStyle>(json,
+                       new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+                   ?? throw new ArgumentException($"'{path}' parsed to nothing.");
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            throw new ArgumentException($"'{path}' is not a valid house style: {ex.Message}");
+        }
     }
 
     /// <summary>

@@ -27,7 +27,7 @@ public static class NavigatorEmitter
         TemplateDocument doc,
         IReadOnlyList<PageEmitModel> pages,
         RouteTableReport routes,
-        string rootNamespace,
+        HouseStyle style,
         string className,
         string reportClassName)
     {
@@ -43,9 +43,9 @@ public static class NavigatorEmitter
         sb.AppendLine("// </auto-generated>");
         sb.AppendLine("#nullable enable");
         sb.AppendLine();
-        sb.AppendLine($"using {rootNamespace}.Models.Generated;");
+        sb.AppendLine($"using {style.ModelsNamespace};");
         sb.AppendLine();
-        sb.AppendLine($"namespace {rootNamespace}.Views.Generated;");
+        sb.AppendLine($"namespace {style.ViewsNamespace};");
         sb.AppendLine();
         sb.AppendLine("/// <summary>");
         sb.AppendLine($"/// Where each button on a {Escape(doc.FolderName)} report goes next.");

@@ -1,0 +1,16 @@
+{
+  "viewsNamespace": "AscentFieldAgent.Mobile.Views.JobForms",
+  "modelsNamespace": "AscentFieldAgent.Mobile.Models.JobForms",
+  "viewModelsNamespace": "AscentFieldAgent.Mobile.ViewModels.JobForms",
+  "controlsNamespace": "AscentFieldAgent.Mobile.Views.Controls",
+  "servicesNamespace": "AscentFieldAgent.Mobile.Services",
+  "jobFormsNamespace": "AscentFieldAgent.Mobile.Models.JobForms",
+  "formsNamespace": "AscentFieldAgent.Mobile.Models.JobForms",
+  "pageBaseClass": "BaseContentPage",
+  "pageBaseClassNamespace": "AscentFieldAgent.Mobile.BaseObjects",
+  "viewModelBaseClass": "BaseViewModel",
+  "viewModelBaseClassNamespace": "AscentFieldAgent.Mobile.BaseObjects",
+  "viewsFolder": "Views/JobForms",
+  "modelsFolder": "Models/JobForms",
+  "viewModelsFolder": "ViewModels/JobForms"
+}

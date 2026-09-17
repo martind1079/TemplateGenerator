@@ -34,7 +34,7 @@ public static class ValidatorEmitter
         TemplateDocument doc,
         IReadOnlyList<PageEmitModel> pages,
         ValidationTableReport validation,
-        string rootNamespace,
+        HouseStyle style,
         string className,
         string reportClassName,
         string? visibilityClassName = null)
@@ -66,9 +66,9 @@ public static class ValidatorEmitter
         sb.AppendLine("// </auto-generated>");
         sb.AppendLine("#nullable enable");
         sb.AppendLine();
-        sb.AppendLine($"using {rootNamespace}.Models.Generated;");
+        sb.AppendLine($"using {style.ModelsNamespace};");
         sb.AppendLine();
-        sb.AppendLine($"namespace {rootNamespace}.Views.Generated;");
+        sb.AppendLine($"namespace {style.ViewsNamespace};");
         sb.AppendLine();
         sb.AppendLine("/// <summary>");
         sb.AppendLine($"/// What makes a field on a {Escape(doc.FolderName)} report invalid.");
