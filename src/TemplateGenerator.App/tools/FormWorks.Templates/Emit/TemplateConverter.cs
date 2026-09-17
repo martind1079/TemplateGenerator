@@ -170,14 +170,17 @@ public static class TemplateConverter
         var validatorClass = $"{family}Validator";
         var visibilityClass = $"{family}Visibility";
         var computedClass = $"{family}Computed";
+        var routesClass = request.Prefix.Length > 0 ? $"{request.Prefix}FormRoutes" : $"{family}Routes";
 
         var routes = RouteTable.Build(doc);
         var validation = ValidationTable.Build(doc);
 
         // Which fields a page validates, so the model emits an error property and the page a
-        // place to show it.
+        // place to show it. Every rule counts here, expressible or not: a refused rule still
+        // means the field can be invalid, just that the condition is written by hand instead
+        // of generated - and that hand-written half needs an XError property and an on-screen
+        // FormFieldError to set, the same as a rule the generator could express itself.
         var validatedFields = validation.Rules
-            .Where(r => r.FullyParsed)
             .Select(r => r.Field)
             .ToHashSet(StringComparer.Ordinal);
 
@@ -216,7 +219,7 @@ public static class TemplateConverter
         {
             converted.Add(EmitPage(
                 model, request, style, keys, written, family,
-                reportClass, navigatorClass, validatorClass, routedActions, visibilityClass, computedClass));
+                reportClass, navigatorClass, validatorClass, routesClass, routedActions, visibilityClass, computedClass));
         }
 
         var result = new ConversionResult
@@ -239,8 +242,6 @@ public static class TemplateConverter
         // whole template is emitted: a single page would otherwise unregister its siblings.
         if (!wholeTemplate || converted.Any(p => !p.Verified) || request.DryRun)
             return result;
-
-        var routesClass = request.Prefix.Length > 0 ? $"{request.Prefix}FormRoutes" : $"{family}Routes";
 
         Write(written, app, family, style.ViewsFolder, $"{routesClass}.g.cs",
             RoutesEmitter.EmitRegistrations(doc, models, style, routesClass, reportClass, doc.FolderName));
@@ -285,13 +286,14 @@ public static class TemplateConverter
     private static ConvertedPage EmitPage(
         PageEmitModel model, ConversionRequest request, HouseStyle style, IReadOnlySet<string> keys,
         List<string> written, string family, string reportClass, string navigatorClass, string validatorClass,
-        IReadOnlySet<string> routedActions, string visibilityClass, string computedClass)
+        string routesClass, IReadOnlySet<string> routedActions, string visibilityClass, string computedClass)
     {
         var xaml = XamlEmitter.EmitPage(model, style);
         var codeBehind = XamlEmitter.EmitCodeBehind(model, style);
         var answers = ModelEmitter.EmitAnswers(model, style, model.Validated);
         var viewModel = ModelEmitter.EmitViewModel(
-            model, style, reportClass, navigatorClass, validatorClass, routedActions, visibilityClass, computedClass);
+            model, style, reportClass, navigatorClass, validatorClass, routesClass, routedActions,
+            visibilityClass, computedClass);
 
         var problems = EmitVerifier.Verify(model, xaml, answers, keys);
 

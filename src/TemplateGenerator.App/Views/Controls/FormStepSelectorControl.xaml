@@ -10,59 +10,79 @@
             Padding="10"
             StrokeShape="RoundRectangle 8">
 
-        <!-- Wraps rather than scrolls. A horizontal ScrollView nested inside the
-             page's vertical one measures to nothing on iOS, and wrapping is the
-             better answer for a 16-page form anyway. -->
-        <FlexLayout x:Name="StepsHost"
-                    Direction="Row"
-                    Wrap="Wrap"
-                    JustifyContent="Start"
-                    AlignItems="Center">
-            <BindableLayout.ItemTemplate>
-                <DataTemplate x:DataType="models:FormStep">
-                    <!-- DataTriggers rather than converters: the values are Colors,
-                         and a converter with an object-typed TrueValue would hand
-                         the binding a string. -->
-                    <Button Text="{Binding ShortTitle}"
-                            FontSize="13"
-                            Padding="14,0"
-                            HeightRequest="36"
-                            MinimumHeightRequest="36"
-                            Margin="0,4,8,4"
-                            IsEnabled="{Binding IsEnabled}"
-                            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAlt}, Dark={StaticResource SurfaceAltDark}}"
-                            TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource TextPrimaryDark}}"
-                            Clicked="OnStepClicked">
-                        <Button.Triggers>
-                            <!-- The page the agent is on -->
-                            <DataTrigger TargetType="Button"
-                                         Binding="{Binding IsCurrent}"
-                                         Value="True">
-                                <Setter Property="BackgroundColor" Value="{StaticResource Primary}" />
-                                <Setter Property="TextColor" Value="{StaticResource White}" />
-                                <Setter Property="FontAttributes" Value="Bold" />
-                            </DataTrigger>
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
 
-                            <!-- Answered, but not the current page -->
-                            <MultiTrigger TargetType="Button">
-                                <MultiTrigger.Conditions>
-                                    <BindingCondition Binding="{Binding IsComplete}" Value="True" />
-                                    <BindingCondition Binding="{Binding IsCurrent}" Value="False" />
-                                </MultiTrigger.Conditions>
-                                <Setter Property="BackgroundColor" Value="{StaticResource PrimaryLight}" />
-                            </MultiTrigger>
+            <!-- Wraps rather than scrolls. A horizontal ScrollView nested inside the
+                 page's vertical one measures to nothing on iOS, and wrapping is the
+                 better answer for a 16-page form anyway. -->
+            <FlexLayout x:Name="StepsHost"
+                        Grid.Column="0"
+                        Direction="Row"
+                        Wrap="Wrap"
+                        JustifyContent="Start"
+                        AlignItems="Center">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="models:FormStep">
+                        <!-- DataTriggers rather than converters: the values are Colors,
+                             and a converter with an object-typed TrueValue would hand
+                             the binding a string. -->
+                        <Button Text="{Binding ShortTitle}"
+                                FontSize="13"
+                                Padding="14,0"
+                                HeightRequest="36"
+                                MinimumHeightRequest="36"
+                                Margin="0,4,8,4"
+                                IsEnabled="{Binding IsEnabled}"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAlt}, Dark={StaticResource SurfaceAltDark}}"
+                                TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource TextPrimaryDark}}"
+                                Clicked="OnStepClicked">
+                            <Button.Triggers>
+                                <!-- The page the agent is on -->
+                                <DataTrigger TargetType="Button"
+                                             Binding="{Binding IsCurrent}"
+                                             Value="True">
+                                    <Setter Property="BackgroundColor" Value="{StaticResource Primary}" />
+                                    <Setter Property="TextColor" Value="{StaticResource White}" />
+                                    <Setter Property="FontAttributes" Value="Bold" />
+                                </DataTrigger>
 
-                            <!-- Not reachable yet -->
-                            <DataTrigger TargetType="Button"
-                                         Binding="{Binding IsEnabled}"
-                                         Value="False">
-                                <Setter Property="Opacity" Value="0.35" />
-                            </DataTrigger>
-                        </Button.Triggers>
-                    </Button>
-                </DataTemplate>
-            </BindableLayout.ItemTemplate>
-        </FlexLayout>
+                                <!-- Answered, but not the current page -->
+                                <MultiTrigger TargetType="Button">
+                                    <MultiTrigger.Conditions>
+                                        <BindingCondition Binding="{Binding IsComplete}" Value="True" />
+                                        <BindingCondition Binding="{Binding IsCurrent}" Value="False" />
+                                    </MultiTrigger.Conditions>
+                                    <Setter Property="BackgroundColor" Value="{StaticResource PrimaryLight}" />
+                                </MultiTrigger>
+
+                                <!-- Not reachable yet -->
+                                <DataTrigger TargetType="Button"
+                                             Binding="{Binding IsEnabled}"
+                                             Value="False">
+                                    <Setter Property="Opacity" Value="0.35" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </FlexLayout>
+
+            <!-- A development aid, not something an agent needs: runs every page's rules
+                 and shows what is wrong, ahead of a real submit flow existing to do that
+                 itself. Absent whenever nothing is bound to ValidateCommand. -->
+            <Button Grid.Column="1"
+                    Text="Validate"
+                    FontSize="13"
+                    Padding="14,0"
+                    HeightRequest="36"
+                    MinimumHeightRequest="36"
+                    VerticalOptions="Start"
+                    IsVisible="{Binding HasValidateCommand, Source={x:Reference Root}}"
+                    Command="{Binding ValidateCommand, Source={x:Reference Root}}"
+                    BackgroundColor="{StaticResource Warning}"
+                    TextColor="{StaticResource White}" />
+
+        </Grid>
     </Border>
 
 </ContentView>

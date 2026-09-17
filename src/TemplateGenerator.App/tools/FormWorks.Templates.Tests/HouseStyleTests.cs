@@ -100,7 +100,7 @@ public class HouseStyleTests
     public void A_house_styles_view_model_base_class_replaces_ObservableObject()
     {
         var code = ModelEmitter.EmitViewModel(
-            Model(), Host, "Report", "Nav", "Validator", new HashSet<string>());
+            Model(), Host, "Report", "Nav", "Validator", "Routes", new HashSet<string>());
 
         Assert.Contains("using Host.BaseObjects;", code);
         Assert.Contains(": BaseViewModel", code);
@@ -112,7 +112,7 @@ public class HouseStyleTests
     {
         var xaml = XamlEmitter.EmitPage(Model(), Host);
         var code = ModelEmitter.EmitViewModel(
-            Model(), Host, "Report", "Nav", "Validator", new HashSet<string>());
+            Model(), Host, "Report", "Nav", "Validator", "Routes", new HashSet<string>());
 
         Assert.Contains("Host.Views.JobForms.", xaml);
         Assert.Contains("clr-namespace:Host.ViewModels.JobForms", xaml);

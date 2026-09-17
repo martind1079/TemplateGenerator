@@ -84,10 +84,48 @@ public static class ReportEmitter
             sb.AppendLine($"    public {page.AnswersClassName} {page.PageName} {{ get; set; }} = new();");
         }
 
+        EmitValidity(sb, pages);
         EmitExchange(sb, pages, vocabulary);
 
         sb.AppendLine("}");
         return sb.ToString();
+    }
+
+    /// <summary>
+    /// Whether every validated field, across every page, is currently error-free.
+    ///
+    /// Only accurate once every page has had its rules run at least once: a page nobody has
+    /// opened has never set its fields' error state, valid or not, so its answers read as
+    /// clean here whether or not they actually are. FormRoutes.ValidateAll runs every page
+    /// first and is the intended way to check this, rather than reading it cold.
+    /// </summary>
+    private static void EmitValidity(StringBuilder sb, IReadOnlyList<PageEmitModel> pages)
+    {
+        var errors = pages
+            .SelectMany(p => p.Validated.Select(field => $"{p.PageName}.{field}Error"))
+            .ToList();
+
+        sb.AppendLine();
+        sb.AppendLine("    /// <summary>");
+        sb.AppendLine("    /// Whether every validated field, across every page, is currently error-free.");
+        sb.AppendLine("    ///");
+        sb.AppendLine("    /// Only accurate once every page has had its rules run at least once - see");
+        sb.AppendLine("    /// FormRoutes.ValidateAll, which does that before reading this.");
+        sb.AppendLine("    /// </summary>");
+        sb.AppendLine("    [JsonIgnore]");
+
+        if (errors.Count == 0)
+        {
+            sb.AppendLine("    public bool IsValid => true;");
+            return;
+        }
+
+        sb.AppendLine("    public bool IsValid =>");
+        for (var i = 0; i < errors.Count; i++)
+        {
+            var end = i == errors.Count - 1 ? ";" : " &&";
+            sb.AppendLine($"        {errors[i]} is null{end}");
+        }
     }
 
     /// <summary>

@@ -23,6 +23,19 @@ public partial class FormStepSelectorControl : ContentView
             typeof(ICommand),
             typeof(FormStepSelectorControl));
 
+    public static readonly BindableProperty ValidateCommandProperty =
+        BindableProperty.Create(
+            nameof(ValidateCommand),
+            typeof(ICommand),
+            typeof(FormStepSelectorControl),
+            propertyChanged: OnValidateCommandChanged);
+
+    private static readonly BindablePropertyKey HasValidateCommandKey =
+        BindableProperty.CreateReadOnly(
+            nameof(HasValidateCommand), typeof(bool), typeof(FormStepSelectorControl), false);
+
+    public static readonly BindableProperty HasValidateCommandProperty = HasValidateCommandKey.BindableProperty;
+
     public IEnumerable? Steps
     {
         get => (IEnumerable?)GetValue(StepsProperty);
@@ -36,6 +49,20 @@ public partial class FormStepSelectorControl : ContentView
         set => SetValue(StepCommandProperty, value);
     }
 
+    /// <summary>
+    /// Runs every page's rules and shows what is wrong with the report so far, without
+    /// needing a submit flow to exist first. Optional: generated pages bind their view
+    /// model's ValidateAllCommand here, and a hand-written page that binds nothing simply
+    /// shows no button, rather than one wired to nothing.
+    /// </summary>
+    public ICommand? ValidateCommand
+    {
+        get => (ICommand?)GetValue(ValidateCommandProperty);
+        set => SetValue(ValidateCommandProperty, value);
+    }
+
+    public bool HasValidateCommand => (bool)GetValue(HasValidateCommandProperty);
+
     public FormStepSelectorControl()
     {
         InitializeComponent();
@@ -47,6 +74,12 @@ public partial class FormStepSelectorControl : ContentView
     {
         if (bindable is FormStepSelectorControl control)
             BindableLayout.SetItemsSource(control.StepsHost, newValue as IEnumerable);
+    }
+
+    private static void OnValidateCommandChanged(BindableObject bindable, object oldValue, object newValue)
+    {
+        if (bindable is FormStepSelectorControl control)
+            control.SetValue(HasValidateCommandKey, newValue is not null);
     }
 
     // The step arrives as the button's own BindingContext, so the command needs no

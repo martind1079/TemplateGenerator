@@ -141,7 +141,7 @@ public class EmitterTests
     {
         // A partial method nobody implements compiles away to nothing, so the button is
         // inert rather than throwing when it is tapped.
-        var code = ModelEmitter.EmitViewModel(Model(("Button", "Next", "Next", [])), "App", "Report", "Nav", "Validator", new HashSet<string>());
+        var code = ModelEmitter.EmitViewModel(Model(("Button", "Next", "Next", [])), "App", "Report", "Nav", "Validator", "Routes", new HashSet<string>());
 
         Assert.Contains("public Command NextCommand { get; }", code);
         Assert.Contains("partial void OnNext();", code);
@@ -153,7 +153,7 @@ public class EmitterTests
     {
         // Every page reads its answers from the shared report, buttons or not.
         var code = ModelEmitter.EmitViewModel(
-            Model(("Text", "Name", "Name", [])), "App", "Report", "Nav", "Validator", new HashSet<string>());
+            Model(("Text", "Name", "Name", [])), "App", "Report", "Nav", "Validator", "Routes", new HashSet<string>());
 
         Assert.Contains("IFormStore<Report> store", code);
 

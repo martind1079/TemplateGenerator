@@ -218,7 +218,7 @@ public static class ModelEmitter
 
     public static string EmitViewModel(
         PageEmitModel page, HouseStyle style, string reportClassName, string navigatorClassName,
-        string validatorClassName, IReadOnlySet<string> routedActions,
+        string validatorClassName, string routesClassName, IReadOnlySet<string> routedActions,
         string? visibilityClassName = null,
         string? computedClassName = null)
     {
@@ -262,6 +262,14 @@ public static class ModelEmitter
         sb.AppendLine("    public ObservableCollection<FormStep> Steps { get; } = [];");
         sb.AppendLine();
         sb.AppendLine("    public Command GoToStepCommand { get; }");
+        sb.AppendLine();
+        sb.AppendLine("    /// <summary>");
+        sb.AppendLine("    /// Runs every page's rules against the current report and arms their messages,");
+        sb.AppendLine("    /// so a person testing the conversion can see the whole report's validation state");
+        sb.AppendLine("    /// without wiring up submission first. Bind a house control's validate affordance");
+        sb.AppendLine($"    /// to it, or call {routesClassName}.ValidateAll directly once submission exists.");
+        sb.AppendLine("    /// </summary>");
+        sb.AppendLine("    public Command ValidateAllCommand { get; }");
         sb.AppendLine();
         sb.AppendLine("    /// <summary>");
         sb.AppendLine("    /// Re-applies this page's rules. Run whenever an answer changes, because a rule");
@@ -394,9 +402,10 @@ public static class ModelEmitter
         }
 
         sb.AppendLine();
-        sb.AppendLine($"    public {page.ClassName}ViewModel(IFormStore<{reportClassName}> store)");
+        sb.AppendLine($"    public {page.ClassName}ViewModel(IFormStore<{reportClassName}> store, IServiceProvider services)");
         sb.AppendLine("    {");
         sb.AppendLine("        _store = store;");
+        sb.AppendLine("        ValidateAllCommand = new Command(() => " + routesClassName + ".ValidateAll(services));");
         sb.AppendLine();
         sb.AppendLine("        // A rule can read any field, so any change can change any message.");
         sb.AppendLine("        Answers.PropertyChanged += (_, e) =>");

@@ -32,7 +32,8 @@ public static class XamlEmitter
         sb.AppendLine();
         sb.AppendLine("            <!-- Which pages this report will pass through, given the answers so far. -->");
         sb.AppendLine("            <controls:FormStepSelectorControl Steps=\"{Binding Steps}\"");
-        sb.AppendLine("                                             StepCommand=\"{Binding GoToStepCommand}\" />");
+        sb.AppendLine("                                             StepCommand=\"{Binding GoToStepCommand}\"");
+        sb.AppendLine("                                             ValidateCommand=\"{Binding ValidateAllCommand}\" />");
         sb.AppendLine();
 
         EmitRows(sb, page.Rows, indent: 3, v, page);

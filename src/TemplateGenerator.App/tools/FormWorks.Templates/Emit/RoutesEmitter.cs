@@ -97,6 +97,26 @@ public static class RoutesEmitter
         }
         sb.AppendLine("        return services;");
         sb.AppendLine("    }");
+        sb.AppendLine();
+        sb.AppendLine("    /// <summary>");
+        sb.AppendLine("    /// Runs every page's rules against the current report, then says whether the");
+        sb.AppendLine("    /// whole thing came back clean.");
+        sb.AppendLine("    ///");
+        sb.AppendLine("    /// A page not currently open has no view model to run its rules through - pages");
+        sb.AppendLine("    /// are transient - so each one is resolved from services just long enough to");
+        sb.AppendLine("    /// call Validate() on it, then let go. What persists is the answer, not the");
+        sb.AppendLine("    /// page: Validate() writes each field's error state onto the report, which is");
+        sb.AppendLine($"    /// what {reportClassName}.IsValid then reads back.");
+        sb.AppendLine("    /// </summary>");
+        sb.AppendLine("    public static bool ValidateAll(IServiceProvider services)");
+        sb.AppendLine("    {");
+        foreach (var page in pages)
+            sb.AppendLine($"        services.GetRequiredService<{page.ClassName}ViewModel>().Validate();");
+        sb.AppendLine();
+        sb.AppendLine($"        var report = services.GetRequiredService<IFormStore<{reportClassName}>>().Current;");
+        sb.AppendLine("        report.ShowValidationErrors = true;");
+        sb.AppendLine("        return report.IsValid;");
+        sb.AppendLine("    }");
         sb.AppendLine("}");
         return sb.ToString();
     }
