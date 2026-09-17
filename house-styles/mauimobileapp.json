@@ -8,8 +8,6 @@
   "formsNamespace": "AscentFieldAgent.Mobile.Models.JobForms",
   "pageBaseClass": "BaseContentPage",
   "pageBaseClassNamespace": "AscentFieldAgent.Mobile.BaseObjects",
-  "viewModelBaseClass": "BaseViewModel",
-  "viewModelBaseClassNamespace": "AscentFieldAgent.Mobile.BaseObjects",
   "viewsFolder": "Views/JobForms",
   "modelsFolder": "Models/JobForms",
   "viewModelsFolder": "ViewModels/JobForms"

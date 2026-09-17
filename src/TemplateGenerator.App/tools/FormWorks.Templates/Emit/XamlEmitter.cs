@@ -92,7 +92,11 @@ public static class XamlEmitter
             return;
         }
 
-        sb.AppendLine($"{pad}<Grid ColumnDefinitions=\"{row.ColumnDefinitions}\">");
+        // HorizontalOptions is explicit for the same reason EmitTrailing's inner grid needs
+        // it: this row grid is itself nested (inside a SubSectionControl's own layout), and
+        // WinUI does not reliably size a nested Grid's star columns from an unconstrained
+        // parent without it.
+        sb.AppendLine($"{pad}<Grid ColumnDefinitions=\"{row.ColumnDefinitions}\" HorizontalOptions=\"Fill\">");
         for (var i = 0; i < row.Cells.Count; i++)
             EmitCell(sb, row.Cells[i], indent + 1, i, v, page);
         sb.AppendLine($"{pad}</Grid>");
@@ -292,9 +296,22 @@ public static class XamlEmitter
 
         // A minimum rather than a fixed height: short captions centre in the same band as
         // the entries beside them, and a caption long enough to wrap grows past it.
+        //
+        // HorizontalOptions is explicit rather than left to the default, because this grid
+        // is itself nested inside a star-sized column of the row it sits in (several of
+        // these side by side, as a row of checkboxes is). WinUI does not reliably propagate
+        // that column's computed width down into an unconstrained nested Grid's own layout
+        // pass, so without this the caption's "*" column collapses toward zero instead of
+        // filling what the outer row actually gave it.
         sb.AppendLine($"{pad}<Grid ColumnDefinitions=\"Auto,*\" ColumnSpacing=\"{Num(v.CaptionGap)}\"");
+        sb.AppendLine($"{pad}      HorizontalOptions=\"Fill\"");
         sb.AppendLine($"{pad}      MinimumHeightRequest=\"{Num(v.InputHeight)}\"{attributes}>");
-        sb.AppendLine($"{pad}    <{mapping.Control} {mapping.BindingProperty}=\"{{Binding {path}}}\" VerticalOptions=\"Center\" />");
+        // HorizontalOptions="Start" on the control itself: left to its default, WinUI's
+        // CheckBox stretches to fill the Auto column's available space rather than
+        // measuring to its own small natural size - so the "Auto" column ends up as wide
+        // as the row lets it, leaving a large gap before the caption and starving the
+        // caption's own column of width.
+        sb.AppendLine($"{pad}    <{mapping.Control} {mapping.BindingProperty}=\"{{Binding {path}}}\" HorizontalOptions=\"Start\" VerticalOptions=\"Center\" />");
 
         if (cell.Title.Length > 0)
         {
