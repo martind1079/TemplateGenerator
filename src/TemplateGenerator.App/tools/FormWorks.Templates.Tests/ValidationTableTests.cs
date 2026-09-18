@@ -160,19 +160,35 @@ public class ValidationTableTests
     }
 
     [Fact]
-    public void Reading_a_field_state_becomes_a_named_seam_not_a_dropped_condition()
+    public void Reading_a_field_that_does_not_resolve_is_refused_rather_than_treated_as_shown()
     {
-        // Visibility is not generated yet. Dropping the condition would make a hidden
-        // field's rule fire against an answer nobody was asked for, so it becomes a call
-        // that is true for now and has somewhere to go when visibility lands.
-        var code = EmitFor("""
+        // IDV names nothing in this fixture. IsShown answers "shown" for any name it does
+        // not recognise - right for a field nothing ever hides, wrong for a name that was
+        // never a field to begin with - so emitting the call anyway would turn "only
+        // required while IDV is shown" into "always required" and never say so.
+        var result = ResultFor("""
             if this.value == "" and IDV.visible == true then
                 this.valid = false; this.message = "Required";
             end
             """);
 
-        Assert.Contains("IsShown(report, \"IDV\")", code);
-        Assert.Contains("private static bool IsShown(", code);
+        Assert.Contains("JobSheet.Reference", result.RefusedFields);
+        Assert.DoesNotContain("IsShown(report, \"IDV\")", result.Code);
+    }
+
+    [Fact]
+    public void Reading_a_field_that_does_resolve_becomes_a_named_seam()
+    {
+        // Unlike IDV above, Other is a real field in this fixture, so the guard is honoured.
+        var result = ResultFor("""
+            if this.value == "" and Other.visible == true then
+                this.valid = false; this.message = "Required";
+            end
+            """, ("Other", "JobSheet.Other"));
+
+        Assert.DoesNotContain("JobSheet.Reference", result.RefusedFields);
+        Assert.Contains("IsShown(report, \"JobSheet.Other\")", result.Code);
+        Assert.Contains("private static bool IsShown(", result.Code);
     }
 
     [Fact]
@@ -230,8 +246,34 @@ public class ValidationTableTests
 
     private static string EmitFor(string lua) => ResultFor(lua).Code;
 
-    private static Emit.ValidatorResult ResultFor(string lua)
+    private static Emit.ValidatorResult ResultFor(string lua, params (string ElementName, string Name)[] extraFields)
     {
+        var children = new List<object>
+        {
+            new Dictionary<string, object>
+            {
+                ["Text"] = new Dictionary<string, object>
+                {
+                    ["fieldType"] = "Text", ["elementName"] = "Reference",
+                    ["name"] = "JobSheet.Reference", ["title"] = "Our Reference",
+                    ["width"] = 940,
+                    ["scripts"] = new Dictionary<string, string> { ["OnValidate"] = lua }
+                }
+            }
+        };
+
+        foreach (var (elementName, name) in extraFields)
+        {
+            children.Add(new Dictionary<string, object>
+            {
+                ["Text"] = new Dictionary<string, object>
+                {
+                    ["fieldType"] = "Text", ["elementName"] = elementName,
+                    ["name"] = name, ["title"] = elementName, ["width"] = 940
+                }
+            });
+        }
+
         var json = JsonSerializer.Serialize(new Dictionary<string, object>
         {
             ["Form"] = new Dictionary<string, object>
@@ -245,19 +287,7 @@ public class ValidationTableTests
                         {
                             ["fieldType"] = "Page", ["elementName"] = "JobSheet", ["name"] = "JobSheet",
                             ["title"] = "Job Sheet", ["width"] = 980,
-                            ["children"] = new object[]
-                            {
-                                new Dictionary<string, object>
-                                {
-                                    ["Text"] = new Dictionary<string, object>
-                                    {
-                                        ["fieldType"] = "Text", ["elementName"] = "Reference",
-                                        ["name"] = "JobSheet.Reference", ["title"] = "Our Reference",
-                                        ["width"] = 940,
-                                        ["scripts"] = new Dictionary<string, string> { ["OnValidate"] = lua }
-                                    }
-                                }
-                            }
+                            ["children"] = children.ToArray()
                         }
                     }
                 }

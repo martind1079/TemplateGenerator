@@ -191,6 +191,98 @@ public class VisibilityEmitterTests
 
         Assert.DoesNotContain("!(", rendered);
     }
+
+    /// <summary>
+    /// FormWorks nests visually: hiding a section hides everything inside it on screen
+    /// with no rule on each child. These cover that IsShown answers the same way, for a
+    /// child nothing ever hides by name - the gap found converting Buy To Let Audio V14,
+    /// where a whole section's worth of fields kept validating as required after their
+    /// section was correctly hidden, because each field's own lookup had no entry to
+    /// refuse and fell back to always-shown instead of asking its container.
+    /// </summary>
+    [Fact]
+    public void A_child_nothing_hides_directly_is_shown_exactly_while_its_container_is()
+    {
+        // A section two handlers disagree about (left to a person, defaulting to shown)
+        // containing a field nothing ever hides directly.
+        var json = JsonSerializer.Serialize(new Dictionary<string, object>
+        {
+            ["Form"] = new Dictionary<string, object>
+            {
+                ["fieldType"] = "Form",
+                ["children"] = new object[]
+                {
+                    new Dictionary<string, object>
+                    {
+                        ["Page"] = new Dictionary<string, object>
+                        {
+                            ["fieldType"] = "Page", ["elementName"] = "P", ["name"] = "P", ["title"] = "Page",
+                            ["children"] = new object[]
+                            {
+                                new Dictionary<string, object>
+                                {
+                                    ["Text"] = new Dictionary<string, object>
+                                    {
+                                        ["fieldType"] = "Text", ["elementName"] = "DriverA",
+                                        ["name"] = "P.DriverA", ["title"] = "Driver A",
+                                        ["scripts"] = new Dictionary<string, string>
+                                        {
+                                            ["OnValueChange"] =
+                                                "Section.visible = false;\nif this.value == \"Yes\" then Section.visible = true; end"
+                                        }
+                                    }
+                                },
+                                new Dictionary<string, object>
+                                {
+                                    ["Text"] = new Dictionary<string, object>
+                                    {
+                                        ["fieldType"] = "Text", ["elementName"] = "DriverB",
+                                        ["name"] = "P.DriverB", ["title"] = "Driver B",
+                                        ["scripts"] = new Dictionary<string, string>
+                                        {
+                                            ["OnValueChange"] =
+                                                "Section.visible = false;\nif this.value == \"No\" then Section.visible = true; end"
+                                        }
+                                    }
+                                },
+                                new Dictionary<string, object>
+                                {
+                                    ["Section"] = new Dictionary<string, object>
+                                    {
+                                        ["fieldType"] = "Section", ["elementName"] = "Section",
+                                        ["name"] = "P.Section", ["title"] = "Section", ["hidden"] = true,
+                                        ["children"] = new object[]
+                                        {
+                                            new Dictionary<string, object>
+                                            {
+                                                ["Text"] = new Dictionary<string, object>
+                                                {
+                                                    ["fieldType"] = "Text", ["elementName"] = "Child",
+                                                    ["name"] = "P.Section.Child", ["title"] = "Child"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        var doc = TemplateLoader.LoadJson(json, "Fixture V1");
+        var pages = doc.Pages
+            .Select(p => PageEmitModelBuilder.Build(doc, p, ControlVocabulary.Default, ""))
+            .ToList();
+
+        var result = VisibilityEmitter.Emit(
+            doc, pages, VisibilityTable.Build(doc), HouseStyle.Default("App"), "Visibility", "Report");
+
+        Assert.Contains("Dictionary<string, string> Parent", result.Code);
+        Assert.Contains("[\"P.Section.Child\"] = \"P.Section\"", result.Code);
+        Assert.Contains("!Parent.TryGetValue(field, out var parent) || IsShown(report, parent)", result.Code);
+    }
 }
 
 /// <summary>

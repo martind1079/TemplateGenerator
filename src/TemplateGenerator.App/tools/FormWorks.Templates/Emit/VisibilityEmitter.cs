@@ -72,6 +72,7 @@ public static class VisibilityEmitter
     {
         var paths = GuardRenderer.PathIndex(pages);
         var types = GuardRenderer.TypeIndex(pages);
+        var resolver = new NameResolver(doc);
 
         // A page's own visibility is how FormWorks decided which pages the form visits,
         // and that is already recovered as routing and emitted as the navigator's path.
@@ -81,7 +82,7 @@ public static class VisibilityEmitter
             .Where(f => !f.Target.IsPage)
             .ToList();
 
-        var emittable = Emittable(candidates, paths);
+        var emittable = Emittable(candidates, paths, resolver);
         var refused = candidates.Where(f => !emittable.Contains(f)).ToList();
 
         // Elements the template starts hidden that nothing ever shows. They carry no rule,
@@ -121,13 +122,13 @@ public static class VisibilityEmitter
         sb.AppendLine($"public static class {className}");
         sb.AppendLine("{");
 
-        var resolver = new NameResolver(doc);
-
         // The state a rule falls back to when none of its guards match, from the element
         // the rule is about.
         var startsHidden = candidates
             .GroupBy(f => f.Target.Label, StringComparer.Ordinal)
             .ToDictionary(g => g.Key, g => g.First().Target.Hidden, StringComparer.Ordinal);
+
+        EmitParentIndex(sb, doc);
 
         var shown = Table(sb, emittable, paths, types, resolver, "visible", "IsShown",
             "Whether a field is currently shown.", reportClassName, alwaysHidden, startsHidden);
@@ -225,14 +226,19 @@ public static class VisibilityEmitter
     /// <summary>
     /// Which fields can be stated as a predicate at all.
     ///
-    /// Three reasons to refuse, and they are different failures. A guard that did not parse
+    /// Four reasons to refuse, and they are different failures. A guard that did not parse
     /// leaves the condition unknown. Several handlers writing one field leaves the order
-    /// unknown. And a field whose visibility is decided by another field's visibility can
+    /// unknown. A field whose visibility is decided by another field's visibility can
     /// close a loop, which a predicate cannot express and which would recurse forever if it
-    /// were emitted, so the cycle is broken here rather than at runtime.
+    /// were emitted, so the cycle is broken here rather than at runtime. And a guard reading
+    /// whether something is shown can name a page rather than a field, or an alias nothing
+    /// resolves - both render as `IsShown(report, "&lt;name&gt;")` for a name the generated
+    /// table has never heard of, which answers "shown" for every name it does not
+    /// recognise. Right for a field nothing ever hides; wrong here, silently, in the
+    /// direction that shows a section no path was meant to reach.
     /// </summary>
     private static HashSet<FieldState> Emittable(
-        IReadOnlyList<FieldState> fields, IReadOnlyDictionary<string, string> paths)
+        IReadOnlyList<FieldState> fields, IReadOnlyDictionary<string, string> paths, NameResolver resolver)
     {
         var candidates = fields
             .Where(f => f.Shape is StateShape.SingleSource or StateShape.Static)
@@ -279,6 +285,16 @@ public static class VisibilityEmitter
                     .Any(g => !g.IsStateTest && g.Field != "this" && !paths.ContainsKey(g.Field))))
                 return false;
 
+            // A state-test atom that does not resolve to a real, non-page field: unlike the
+            // check above, this fails open rather than closed - IsShown answers "shown" for
+            // a name it does not recognise - so it has to be caught here rather than trusted
+            // to render as an honest false.
+            if (field.Writes.Any(w => w.When.SelectMany(c => c.Atoms)
+                    .Where(g => g.IsStateTest)
+                    .Select(g => resolver.Resolve(g.Field == "this" ? field.Target.Label : g.Field, w.Source))
+                    .Any(node => node is null || node.IsPage)))
+                return false;
+
             safe.Add(field);
             return true;
         }
@@ -323,6 +339,33 @@ public static class VisibilityEmitter
 
         sb.Append((!startsHidden).ToString().ToLowerInvariant());
         return sb.ToString();
+    }
+
+    /// <summary>
+    /// A field's nearest container, so a field nothing ever hides directly still answers
+    /// not-shown when the section around it is.
+    ///
+    /// FormWorks nests visually: hiding a section hides everything inside it without a
+    /// rule on each child, the same way a hidden MAUI layout hides its children without
+    /// each of them needing its own IsVisible binding. IsShown's own fallback used to
+    /// answer "nothing decides this field directly, so it is shown" without checking
+    /// whether the reason nothing decides it is that the template never expected anyone to
+    /// ask - every field inside a conditionally-hidden section, unless something also
+    /// hides that field by name specifically. A tick box would be shown on screen once its
+    /// section's Decide hook hid the section, and required regardless, because its own
+    /// entry in this table never existed to be refused in the first place.
+    /// </summary>
+    private static void EmitParentIndex(StringBuilder sb, TemplateDocument doc)
+    {
+        sb.AppendLine();
+        sb.AppendLine("    /// <summary>Every field's nearest container, page-clipped. See IsShown.</summary>");
+        sb.AppendLine("    private static readonly Dictionary<string, string> Parent = new(StringComparer.Ordinal)");
+        sb.AppendLine("    {");
+
+        foreach (var node in doc.AllNodes.Where(n => !n.IsPage && n.Parent is not null && !n.Parent.IsPage))
+            sb.AppendLine($"        [\"{GuardRenderer.Escape(node.Label)}\"] = \"{GuardRenderer.Escape(node.Parent!.Label)}\",");
+
+        sb.AppendLine("    };");
     }
 
     private static HashSet<string> Table(
@@ -374,8 +417,19 @@ public static class VisibilityEmitter
             sb.AppendLine("            // The template decides this for no field.");
 
         sb.AppendLine();
-        sb.AppendLine("            // Nothing decides it, so it is shown, as the template shows it.");
-        sb.AppendLine("            _ => true");
+
+        if (property == "visible")
+        {
+            sb.AppendLine("            // Nothing decides it directly: shown exactly while its container is,");
+            sb.AppendLine("            // the same way a hidden section hides everything inside it on screen.");
+            sb.AppendLine("            _ => !Parent.TryGetValue(field, out var parent) || IsShown(report, parent)");
+        }
+        else
+        {
+            sb.AppendLine("            // Nothing decides it, so it is usable, as the template shows it.");
+            sb.AppendLine("            _ => true");
+        }
+
         sb.AppendLine("        };");
         sb.AppendLine("    }");
 

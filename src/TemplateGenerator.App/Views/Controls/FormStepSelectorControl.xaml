@@ -68,10 +68,11 @@
             </FlexLayout>
 
             <!-- A development aid, not something an agent needs: runs every page's rules
-                 and shows what is wrong, ahead of a real submit flow existing to do that
-                 itself. Absent whenever nothing is bound to ValidateCommand. -->
+                 and, if everything passes, prints the report as it would be sent to the
+                 portal. Stands in for a real submit flow that does not exist yet. Absent
+                 whenever nothing is bound to ValidateCommand. -->
             <Button Grid.Column="1"
-                    Text="Validate"
+                    Text="Submit"
                     FontSize="13"
                     Padding="14,0"
                     HeightRequest="36"

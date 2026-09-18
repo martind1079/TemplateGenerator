@@ -56,6 +56,65 @@ Newest first. Each entry: what a real template exposed, and what changed. If the
 shape shows up in a second template, that's the signal in section 11 of
 `finishing-a-converted-template.md` - stop writing it by hand a third time.
 
+### A field nothing hides directly stayed "shown" even after its whole section was hidden
+
+**Found in:** Buy To Let Audio V14's `BuildingInformationPage.BuildingInformation` section -
+after the fix below, the Submit popup was still complaining about fields in that section on
+paths that never show it. Same diagnostic technique as the entry below: the popup naming the
+field is what made this visible at all.
+
+FormWorks nests visually - hiding a section hides every field inside it on screen with no
+rule on each child, the same way a hidden MAUI layout hides its children without each of
+them needing its own `IsVisible` binding. But `IsShown`'s fallback for "nothing decides
+this field directly" was a flat `true`, which does not distinguish a field nothing was
+ever going to hide from a field inside a section something else hides. Every field in
+`BuildingInformation` bar the handful with their own explicit rule - `Type`,
+`Detachment`, `Construction`, `Windows`, a dozen more - was validating as required on
+every path, because each one's own lookup had no entry and fell straight through to
+"shown", never asking whether its container was.
+
+Fixed by giving `IsShown` (not `IsUsable` - no evidence yet that the same gap exists for
+enablement, and reaching for the narrower fix first) a `Parent` index, generated from the
+template tree, and changing its fallback from a flat `true` to "shown exactly while my
+container is" - recursing through `IsShown` itself, so it composes correctly with a
+hand-written `Decide` hook on an ancestor section without either one needing to know about
+the other.
+
+### A guard reading a page's own shown state, or an unresolved alias, silently validated as "always shown"
+
+**Found in:** Buy To Let Audio V14 (`BuildingInformationAvailable`, guarded by
+`BuildingInformationPage.visible`) and Ascent Reconnect Audio V23 (`GoneAway.GoneAway.
+AdditionalInformation`, guarded by the alias `GoneAway.visible`, which does not resolve to
+anything at this scope). Found via the Submit button's new "why did validation fail" popup
+(see below) surfacing fields that were invalid on pages with nothing visibly wrong -
+worth remembering as a diagnostic technique, not just a feature.
+
+Both `ValidatorEmitter` and `VisibilityEmitter` resolve a state-test guard's target (e.g.
+`X.visible`) and hand it straight to `IsShown`/`IsUsable` without checking that the
+resolution actually landed on something real. The generated tables answer "shown" for any
+name they do not recognise - correct for a field nothing ever hides, and silently wrong
+for a name that resolved to nothing, or that resolved to a *page* (page visibility is
+deliberately not tracked there at all; it is recovered as routing instead, per an
+"Open" item in `converter-progress.md` that turned out to have this exact consequence).
+The practical effect: a field meant to be required only on certain paths becomes required
+on every path, with nothing in the generated code or Remaining.md admitting it.
+
+Fixed in both emitters: a state-test guard that resolves to `null` or to a page is now
+refused rather than emitted, landing the field in Remaining.md and the worklist like any
+other refused rule instead of silently mis-validating. `ValidatorResult` gained
+`RefusedFields`, the one place that now knows every refusal reason; `RemainingWorkEmitter`
+and `WorklistEmitter` read that instead of re-deriving their own (looser) idea of what
+counts as refused, so the two cannot drift apart again the next time there is a second
+reason to refuse something.
+
+`BuyToLetAudioV14BuildingInformationPagePageViewModel`'s `BuildingInformationAvailable`
+rule is now correctly refused rather than silently satisfied, but writing it by hand needs
+knowing whether `BuildingInformationPage` is actually reachable given the current
+answers - which is currently something only the Navigator's routing logic knows, not
+something queryable as a simple predicate. Not yet implemented; worth a small generator
+feature (an `IsPageReachable`-shaped query against the Navigator) before hand-writing this
+one by replicating routing logic ad hoc.
+
 ### A self-referential OnValidate write is invisible to the worklist and Remaining.md alike
 
 **Found in:** Buy To Let Audio V14, `JobSheet.ContactRules.ActVisits`.

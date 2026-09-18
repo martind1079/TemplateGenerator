@@ -5,6 +5,13 @@ using FormWorks.Templates.Model;
 namespace FormWorks.Templates.Emit;
 
 /// <param name="Unexpressible">Rules whose condition could not be recovered.</param>
+/// <param name="RefusedFields">
+/// Every field with at least one refused rule, by label. The single source of truth for
+/// "did this field's validation actually get generated" - Remaining.md and the worklist
+/// both read this rather than re-deriving their own answer, so a refusal reason this
+/// class discovers (a condition it will not honour, not just one it could not parse)
+/// cannot go unlisted while the field quietly validates nothing.
+/// </param>
 /// <param name="Wording">
 /// Rules that work but say the wrong thing, because the template built the message at
 /// runtime and the field's caption stands in. Separate from Unexpressible: one is a rule
@@ -15,6 +22,7 @@ public sealed record ValidatorResult(
     IReadOnlyDictionary<string, IReadOnlyList<string>> ErrorPropertiesByPage,
     int RulesEmitted,
     IReadOnlyList<string> Unexpressible,
+    IReadOnlySet<string> RefusedFields,
     IReadOnlyList<(string Field, string Expression, string Caption)> Wording);
 
 /// <summary>
@@ -52,6 +60,7 @@ public static class ValidatorEmitter
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
         var byPage = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
         var unexpressible = new List<string>();
+        var refusedFields = new HashSet<string>(StringComparer.Ordinal);
         var wording = new List<(string, string, string)>();
         var titles = pages
             .SelectMany(p => p.AllFields)
@@ -104,9 +113,12 @@ public static class ValidatorEmitter
             {
                 if (!owners.TryGetValue(group.Key, out var property)) continue;
 
-                var expressible = group.Where(r => r.FullyParsed).ToList();
-                foreach (var refused in group.Where(r => !r.FullyParsed))
+                var expressible = group.Where(r => r.FullyParsed && !HasUnreliableStateTest(r, nodes, resolver)).ToList();
+                foreach (var refused in group.Where(r => !r.FullyParsed || HasUnreliableStateTest(r, nodes, resolver)))
+                {
                     unexpressible.Add($"{refused.Field}: {string.Join(" AND ", refused.When)}");
+                    refusedFields.Add(refused.Field);
+                }
 
                 if (expressible.Count == 0) continue;
 
@@ -141,7 +153,7 @@ public static class ValidatorEmitter
         EmitHelpers(sb, reportClassName, visibilityClassName);
 
         sb.AppendLine("}");
-        return new ValidatorResult(sb.ToString(), byPage, emitted, unexpressible, wording);
+        return new ValidatorResult(sb.ToString(), byPage, emitted, unexpressible, refusedFields, wording);
     }
 
     /// <summary>
@@ -245,6 +257,31 @@ public static class ValidatorEmitter
 
         reported.Add((rule.Field, rule.MessageExpression, caption));
         return $"\"{Escape(caption)}\"";
+    }
+
+    /// <summary>
+    /// Whether a rule's condition reads a shown/enabled state IsShown cannot answer
+    /// honestly: a *page's*, e.g. `SomePage.visible` (page visibility is deliberately not
+    /// in the generated tables - which pages a form visits is recovered as routing instead,
+    /// to avoid reporting the same decision twice), or an alias that does not resolve to
+    /// anything at all.
+    ///
+    /// Both render as `IsShown(report, "&lt;name&gt;")` for a name the generated table has
+    /// never heard of, and that table answers "shown" for any name it does not recognise -
+    /// right for a field nothing ever hides, wrong here: it turns "only required while X"
+    /// into "always required", silently. Refused instead, the same way any other guard the
+    /// generator cannot honour is.
+    /// </summary>
+    private static bool HasUnreliableStateTest(
+        ValidationRule rule, IReadOnlyDictionary<string, TemplateNode> nodes, NameResolver resolver)
+    {
+        var from = nodes.GetValueOrDefault(rule.Field);
+
+        return rule.When
+            .SelectMany(c => c.Atoms)
+            .Where(g => g.IsStateTest)
+            .Select(g => resolver.Resolve(g.Field == "this" ? rule.Field : g.Field, from))
+            .Any(node => node is null || node.IsPage);
     }
 
     private static bool Owns(PageEmitModel page, string field)

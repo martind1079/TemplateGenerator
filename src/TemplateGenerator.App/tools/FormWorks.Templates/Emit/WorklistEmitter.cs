@@ -43,16 +43,19 @@ public sealed record WorklistItem(
 public static class WorklistEmitter
 {
     public static IReadOnlyList<WorklistItem> Build(TemplateAnalysis analysis)
-        => Build(analysis.Validation, analysis.State, analysis.Computed);
+        => Build(analysis.Validation, analysis.Validator, analysis.State, analysis.Computed);
 
     public static IReadOnlyList<WorklistItem> Build(
-        ValidationTableReport validation, VisibilityResult state, ComputedResult computed)
+        ValidationTableReport validation, ValidatorResult validator, VisibilityResult state, ComputedResult computed)
     {
         var items = new List<WorklistItem>();
         var id = 1;
 
+        // validator.RefusedFields, not `!r.FullyParsed`: a rule can parse fine and still
+        // be refused once resolving its condition shows it reads a page's own shown state
+        // rather than a field's, which validator is the one place that already knows.
         foreach (var group in validation.Rules
-                     .Where(r => !r.FullyParsed)
+                     .Where(r => validator.RefusedFields.Contains(r.Field))
                      .GroupBy(r => r.Field, StringComparer.Ordinal)
                      .OrderBy(g => g.Key, StringComparer.Ordinal))
         {

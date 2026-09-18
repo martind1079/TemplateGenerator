@@ -24,13 +24,19 @@ public static class RemainingWorkEmitter
         ComputedResult computed,
         IReadOnlyList<PageEmitModel> pages)
     {
-        var refused = validation.Rules.Where(r => !r.FullyParsed).ToList();
+        // validator.RefusedFields, not validation.Rules.Where(!FullyParsed): a rule can
+        // parse fine and still be refused at emission time - reading a page's own shown
+        // state rather than a field's is the case found so far - and validator is the one
+        // place that already knows every reason, syntactic or not. Re-deriving refusal
+        // here independently is exactly how the two would go on disagreeing next time
+        // there is a second reason.
+        var refused = validation.Rules.Where(r => validator.RefusedFields.Contains(r.Field)).ToList();
         var scripts = doc.AllNodes.ToDictionary(n => n.Label, n => n, StringComparer.Ordinal);
 
         // One numbering, computed once, for both this document and a `formworks worklist`
         // CSV export - so "item 14" means the same field whichever of the two a developer
         // is looking at. See WorklistEmitter for why the order is stable across runs.
-        var numbers = WorklistEmitter.Build(validation, state, computed)
+        var numbers = WorklistEmitter.Build(validation, validator, state, computed)
             .ToDictionary(i => (i.Category, i.Field, i.Property), i => i.Id);
 
         int NumberOf(WorklistCategory category, string field, string? property = null)
