@@ -23,9 +23,12 @@ public static class MauiProgram
 		// AllocConsole alone is not enough: Console.Out was already bound to this
 		// process's (nonexistent) startup handles before the console existed, so without
 		// re-pointing it, writes still silently go nowhere even once the window is on screen.
-		AllocConsole();
-		var stdout = new StreamWriter(Console.OpenStandardOutput()) { AutoFlush = true };
-		Console.SetOut(stdout);
+		//
+		// Commented out by default - uncomment to see the Submit button's report preview /
+		// any other Console.WriteLine while testing.
+		//AllocConsole();
+		//var stdout = new StreamWriter(Console.OpenStandardOutput()) { AutoFlush = true };
+		//Console.SetOut(stdout);
 #endif
 
 		var builder = MauiApp.CreateBuilder();
