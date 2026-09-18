@@ -32,6 +32,9 @@ public static class Commands
                          [--isolate] [--house-style FILE]
                                          emit a template: pages, answers, view models,
                                          the report, the navigator and the registrations
+              worklist   --template T [--isolate | --prefix P] [--out FILE]
+                                         every item left to a person, numbered, as CSV -
+                                         needs no --app; numbers match Remaining.md's
 
             Options
               --estate <path>       template folder (default: the nearest templates/ folder)
@@ -232,6 +235,45 @@ public static class Commands
 
         Report(result, args);
         return result.Succeeded ? 0 : 1;
+    }
+
+    /// <summary>
+    /// Every item Remaining.md would list as left to a person, numbered, as CSV - a
+    /// developer's own progress tracker, not something the generator keeps rewriting.
+    ///
+    /// Knowable from template.json alone: no --app, no house style, no writing anything
+    /// under the template's own name. Numbering matches Remaining.md's the next time that
+    /// gets generated (RemainingWorkEmitter uses the same WorklistEmitter.Build), so a
+    /// spreadsheet made today still lines up with a Remaining.md made tomorrow, as long as
+    /// the template itself has not changed.
+    /// </summary>
+    public static int Worklist(Args args)
+    {
+        var doc = Load(args, out _).Single();
+
+        var prefix = args.Value("prefix")
+                     ?? (args.Has("isolate") ? TemplateConverter.PrefixFor(doc) : "");
+
+        var analysis = TemplateConverter.Analyze(doc, HouseStyle.Default("App"), prefix);
+        var items = WorklistEmitter.Build(analysis);
+        var csv = WorklistEmitter.EmitCsv(items, doc.FolderName);
+
+        var outPath = args.Value("out");
+        if (outPath is not null)
+        {
+            var directory = Path.GetDirectoryName(outPath);
+            if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
+
+            File.WriteAllText(outPath, csv);
+            Console.WriteLine($"== {doc.FolderName}: {items.Count} item(s) left to a person");
+            Console.WriteLine($"   wrote {outPath}");
+        }
+        else
+        {
+            Console.Write(csv);
+        }
+
+        return 0;
     }
 
     /// <summary>

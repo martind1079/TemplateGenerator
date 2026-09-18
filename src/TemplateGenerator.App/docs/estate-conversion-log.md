@@ -9,14 +9,19 @@ what a template exposed that the generator got wrong or couldn't express, and wh
 changed as a result. Read `finishing-a-converted-template.md` first if you haven't -
 that's the general how-to this log assumes.
 
+Each template's progress-tracking spreadsheet lives in `docs/worklists/<Prefix>.worklist.csv`
+- run `formworks worklist --template T [--isolate | --prefix P] --out docs/worklists/<Prefix>.worklist.csv`.
+Needs no `--app`; its numbering matches whatever Remaining.md's own numbered headings say
+the next time that template is regenerated.
+
 ---
 
 ## Template status
 
 | Template | Status | Notes |
 |---|---|---|
-| Ascent Reconnect Audio V23 | Converted, in mauimobileapp | `ReconnectAudioV23*`. Hand-written halves largely done. |
-| Nationwide PreLit PreEnf Audio V6 | Converted, in progress | `NationwidePreLitPreEnfAudioV6*`. InterviewPart2 and BuildingInformation hand-written halves in progress; see issues below. |
+| Ascent Reconnect Audio V23 | Converted, in mauimobileapp | Now `AscentReconnectAudioV23*` throughout - confirmed content-identical to the old `ReconnectAudioV23*`, which has been fully renamed and removed. `MauiProgram.cs`/`AppShell.xaml.cs` wire to it, hand-written halves ported. `AscentFormMenuListControl.xaml` shows its menu entry via `{x:Static}` on the generated `TemplateName`/`EntryRoute` constants rather than a hardcoded route string - worth doing for every future template's menu entry too. |
+| Nationwide PreLit PreEnf Audio V6 | Converted, in progress | `NationwidePreLitPreEnfAudioV6*`. Same joined-up-folder-name situation as Reconnect: regenerated from the correctly spaced `templates/Nationwide PreLit PreEnf Audio V6` folder with `--prefix NationwidePreLitPreEnfAudioV6`, confirmed content-identical (banner-comment-only diff), so `TemplateName` now displays correctly on the menu with no class-name change needed. InterviewPart2 and BuildingInformation hand-written halves in progress; see issues below. |
 | Rental Investigation Report V13 | Not started | |
 | Sole Deceased Report Audio V13 | Not started | |
 | Occupancy Report V18 | Not started | Used in `host-app-integration.md`'s worked example, against the original app, not mauimobileapp. |
@@ -26,7 +31,7 @@ that's the general how-to this log assumes.
 | Virgin Money Occupancy Report Audio V9 | Not started | |
 | RBS Pre Eviction Audio V18 | Not started | |
 | Santander Pre-Enforcement Audio V4 | Not started | |
-| Buy To Let Audio V14 | Not started | |
+| Buy To Let Audio V14 | Converted, in progress | `BuyToLetAudioV14*`, wired into `MauiProgram.cs`/`AppShell.xaml.cs`/menu. 23 of 24 worklist items done: the ID-evidence validation rule, name-by-age on both occupant lists (8 on Interview, 6 on JobSheet), the ContactOK/ActAM/ActPM/ActEVE visit-count computation (see notes below), and all 4 BuildingInformation visibility items - one of which (`BuildingInformation` itself) is a best-effort combination of two disagreeing handlers and worth a domain check, documented as such in the code. `Completion.Section7.AgentVisitForm` (item 2) is the same SQL-backed OnOpen pattern as Nationwide, left as a documented stub pending the CSV-into-local-database work. |
 | Interest Only Audio V31 | Not started | |
 | Mortgage Arrears RBS Audio V25 | Not started | |
 | Mortgage Arrears Santander Audio V46 | Not started | |
@@ -50,6 +55,25 @@ entry, per `finishing-a-converted-template.md` section 10.
 Newest first. Each entry: what a real template exposed, and what changed. If the same
 shape shows up in a second template, that's the signal in section 11 of
 `finishing-a-converted-template.md` - stop writing it by hand a third time.
+
+### A self-referential OnValidate write is invisible to the worklist and Remaining.md alike
+
+**Found in:** Buy To Let Audio V14, `JobSheet.ContactRules.ActVisits`.
+
+`ComputedValueTable.Build` deliberately skips a write where the field names itself
+(`if (name == "this") continue;` - "a handler setting its own answer is not filling in
+another field"), which is right for the common case: a field computing its own validity
+via `this.valid = false`. But `ActVisits`'s `OnValidate` does `this.value =
+this.value + 1` four times to count filled-in dates, which is a genuinely computed answer
+the generator cannot express, same as `ActAM`/`ActPM`/`ActEVE` right next to it - it is
+just invisible on the worklist because of how it is written, not because it needs no
+attention. Found only by reading the field's own script directly while working out
+`ContactOK`, which depends on it.
+
+Not fixed in the generator yet: doing so means teaching `ComputedValueTable` to tell a
+field computing its own validity apart from one computing its own value, which needs a
+second real example before it is worth generalising rather than guessing at the right
+rule from one.
 
 ### Remaining.md shows the original script for every left-to-a-person computed write
 

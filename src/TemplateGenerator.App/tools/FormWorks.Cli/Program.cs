@@ -14,6 +14,7 @@ try
         "graph" => Commands.Graph(args1),
         "routes" => Commands.Routes(args1),
         "generate" => Commands.Generate(args1),
+        "worklist" => Commands.Worklist(args1),
         "prefixes" => Commands.Prefixes(args1),
         "shapes" => Commands.Shapes(args1),
         "coverage" => Commands.Coverage(args1),

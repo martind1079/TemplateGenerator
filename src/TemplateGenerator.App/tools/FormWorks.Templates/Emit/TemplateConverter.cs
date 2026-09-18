@@ -115,6 +115,21 @@ public sealed record ConversionResult
 }
 
 /// <summary>
+/// What a template decides about itself, independent of any app to write into: every
+/// page's model, and the four passes that decide what is generated versus left to a
+/// person. See <see cref="TemplateConverter.Analyze"/>.
+/// </summary>
+public sealed record TemplateAnalysis(
+    TemplateDocument Document,
+    IReadOnlyList<PageEmitModel> Models,
+    ValidationTableReport Validation,
+    ValidatorResult Validator,
+    VisibilityResult State,
+    ComputedResult Computed,
+    string Family,
+    string ReportClass);
+
+/// <summary>
 /// Runs a template through every emitter, in the order they depend on each other.
 ///
 /// This is the whole of conversion. It lives in the library rather than in the command line
@@ -139,40 +154,29 @@ public static class TemplateConverter
             ? $"{PageEmitModelBuilder.Identifier(document.Family)}V{version}"
             : PageEmitModelBuilder.Identifier(document.Family);
 
-    public static ConversionResult Convert(ConversionRequest request)
+    /// <summary>
+    /// What a template decides, independent of any app: every page's model, and the four
+    /// passes that decide what is generated versus left to a person.
+    ///
+    /// Split out from <see cref="Convert"/> because the two callers that want it - the
+    /// worklist and Remaining.md itself - need none of what the other half of conversion
+    /// does: no app to write into, no resource keys to verify against, no XAML at all. A
+    /// template's worklist is knowable from template.json alone.
+    /// </summary>
+    public static TemplateAnalysis Analyze(
+        TemplateDocument doc, HouseStyle style, string prefix = "", ControlVocabulary? vocabulary = null)
     {
-        var started = Stopwatch.StartNew();
-        var doc = request.Document;
-        var app = request.AppDirectory;
-        var vocabulary = request.Vocabulary;
-        var style = request.HouseStyle ?? HouseStyle.Default(request.RootNamespace);
+        vocabulary ??= ControlVocabulary.Default;
 
-        var wholeTemplate = request.Pages.Count == 0;
-        var pages = wholeTemplate
-            ? doc.Pages.ToList()
-            : request.Pages
-                .Select(name => doc.Pages.FirstOrDefault(p =>
-                            string.Equals(p.ElementName, name, StringComparison.OrdinalIgnoreCase))
-                        ?? throw new ArgumentException(
-                            $"No page '{name}'. Pages: {string.Join(", ", doc.Pages.Select(p => p.ElementName))}"))
-                .ToList();
-
-        // The keys the app's style sheet actually declares, so a page naming one it does not
-        // have is stopped here rather than crashing when it is shown.
-        var keys = EmitVerifier.ReadResourceKeys(app);
-
-        var family = request.Prefix.Length > 0
-            ? request.Prefix
+        var family = prefix.Length > 0
+            ? prefix
             : $"{PageEmitModelBuilder.Identifier(doc.Family)}V{doc.Version}";
 
         var reportClass = $"{family}Report";
-        var navigatorClass = $"{family}Navigator";
         var validatorClass = $"{family}Validator";
         var visibilityClass = $"{family}Visibility";
         var computedClass = $"{family}Computed";
-        var routesClass = request.Prefix.Length > 0 ? $"{request.Prefix}FormRoutes" : $"{family}Routes";
 
-        var routes = RouteTable.Build(doc);
         var validation = ValidationTable.Build(doc);
 
         // Which fields a page validates, so the model emits an error property and the page a
@@ -184,18 +188,13 @@ public static class TemplateConverter
             .Select(r => r.Field)
             .ToHashSet(StringComparer.Ordinal);
 
-        // Buttons the template actually routes from. The rest keep their empty seam.
-        var routedActions = routes.Routes
-            .Select(r => r.SourceField)
-            .ToHashSet(StringComparer.Ordinal);
-
         // Every page is built before any is written, because visibility cannot be decided one
         // page at a time: a guard on this page routinely reads a field on another, and the
         // predicate needs every field resolvable before it can say which are safe.
-        var models = pages
+        var models = doc.Pages
             .Select(node =>
             {
-                var built = PageEmitModelBuilder.Build(doc, node, vocabulary, request.Prefix);
+                var built = PageEmitModelBuilder.Build(doc, node, vocabulary, prefix);
                 return built with
                 {
                     Validated = built.AllFields
@@ -211,6 +210,62 @@ public static class TemplateConverter
 
         for (var i = 0; i < models.Count; i++)
             models[i] = models[i] with { StateNames = VisibilityEmitter.StateNames(models[i], state) };
+
+        var validator = ValidatorEmitter.Emit(
+            doc, models, validation, style, validatorClass, reportClass, visibilityClass);
+
+        var computed = ComputedEmitter.Emit(
+            doc, models, ComputedValueTable.Build(doc), state.Cleared,
+            style, computedClass, reportClass);
+
+        return new TemplateAnalysis(doc, models, validation, validator, state, computed, family, reportClass);
+    }
+
+    public static ConversionResult Convert(ConversionRequest request)
+    {
+        var started = Stopwatch.StartNew();
+        var doc = request.Document;
+        var app = request.AppDirectory;
+        var vocabulary = request.Vocabulary;
+        var style = request.HouseStyle ?? HouseStyle.Default(request.RootNamespace);
+
+        var wholeTemplate = request.Pages.Count == 0;
+
+        // The keys the app's style sheet actually declares, so a page naming one it does not
+        // have is stopped here rather than crashing when it is shown.
+        var keys = EmitVerifier.ReadResourceKeys(app);
+
+        var analysis = Analyze(doc, style, request.Prefix, vocabulary);
+        var family = analysis.Family;
+        var reportClass = analysis.ReportClass;
+        var validation = analysis.Validation;
+        var state = analysis.State;
+        var validator = analysis.Validator;
+        var computed = analysis.Computed;
+
+        var navigatorClass = $"{family}Navigator";
+        var validatorClass = $"{family}Validator";
+        var visibilityClass = $"{family}Visibility";
+        var computedClass = $"{family}Computed";
+        var routesClass = request.Prefix.Length > 0 ? $"{request.Prefix}FormRoutes" : $"{family}Routes";
+
+        var routes = RouteTable.Build(doc);
+
+        // Buttons the template actually routes from. The rest keep their empty seam.
+        var routedActions = routes.Routes
+            .Select(r => r.SourceField)
+            .ToHashSet(StringComparer.Ordinal);
+
+        // A single page's worth of models, when the request names one - Analyze always
+        // builds every page, since visibility needs the whole template resolvable at once.
+        var models = wholeTemplate
+            ? analysis.Models
+            : request.Pages
+                .Select(name => analysis.Models.FirstOrDefault(m =>
+                            string.Equals(m.Page.ElementName, name, StringComparison.OrdinalIgnoreCase))
+                        ?? throw new ArgumentException(
+                            $"No page '{name}'. Pages: {string.Join(", ", doc.Pages.Select(p => p.ElementName))}"))
+                .ToList();
 
         var written = new List<string>();
         var converted = new List<ConvertedPage>();
@@ -251,13 +306,6 @@ public static class TemplateConverter
 
         var navigator = NavigatorEmitter.Emit(
             doc, models, routes, style, navigatorClass, reportClass);
-
-        var validator = ValidatorEmitter.Emit(
-            doc, models, validation, style, validatorClass, reportClass, visibilityClass);
-
-        var computed = ComputedEmitter.Emit(
-            doc, models, ComputedValueTable.Build(doc), state.Cleared,
-            style, computedClass, reportClass);
 
         Write(written, app, family, style.ViewsFolder, $"{validatorClass}.g.cs", validator.Code);
         Write(written, app, family, style.ViewsFolder, $"{visibilityClass}.g.cs", state.Code);

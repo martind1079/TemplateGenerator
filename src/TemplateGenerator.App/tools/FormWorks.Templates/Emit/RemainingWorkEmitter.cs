@@ -27,6 +27,15 @@ public static class RemainingWorkEmitter
         var refused = validation.Rules.Where(r => !r.FullyParsed).ToList();
         var scripts = doc.AllNodes.ToDictionary(n => n.Label, n => n, StringComparer.Ordinal);
 
+        // One numbering, computed once, for both this document and a `formworks worklist`
+        // CSV export - so "item 14" means the same field whichever of the two a developer
+        // is looking at. See WorklistEmitter for why the order is stable across runs.
+        var numbers = WorklistEmitter.Build(validation, state, computed)
+            .ToDictionary(i => (i.Category, i.Field, i.Property), i => i.Id);
+
+        int NumberOf(WorklistCategory category, string field, string? property = null)
+            => numbers[(category, field, property)];
+
         var sb = new StringBuilder();
         sb.AppendLine($"# {doc.FolderName} — what is left to a person");
         sb.AppendLine();
@@ -84,12 +93,13 @@ public static class RemainingWorkEmitter
             sb.AppendLine();
         }
 
-        foreach (var group in refused.GroupBy(r => r.Field, StringComparer.Ordinal))
+        foreach (var group in refused.GroupBy(r => r.Field, StringComparer.Ordinal)
+                     .OrderBy(g => g.Key, StringComparer.Ordinal))
         {
             var node = scripts.GetValueOrDefault(group.Key);
             var page = group.First().Page;
 
-            sb.AppendLine($"### {group.Key}");
+            sb.AppendLine($"### {NumberOf(WorklistCategory.Validation, group.Key)}. {group.Key}");
             sb.AppendLine();
             sb.AppendLine($"On page **{page}**. {group.Count()} rule(s).");
             sb.AppendLine();
@@ -126,9 +136,9 @@ public static class RemainingWorkEmitter
 
         EmitUnread(sb, doc);
         EmitMessages(sb, doc, validator);
-        EmitComputed(sb, computed);
-        EmitState(sb, doc, state);
-        EmitUnattributed(sb, doc, state);
+        EmitComputed(sb, computed, numbers);
+        EmitState(sb, doc, state, numbers);
+        EmitUnattributed(sb, doc, state, numbers);
         return sb.ToString();
     }
 
@@ -198,7 +208,9 @@ public static class RemainingWorkEmitter
     /// has reached yet. So these are listed even though there is nothing wrong with the
     /// generated code: the gap is invisible on screen.
     /// </summary>
-    private static void EmitComputed(StringBuilder sb, ComputedResult computed)
+    private static void EmitComputed(
+        StringBuilder sb, ComputedResult computed,
+        IReadOnlyDictionary<(WorklistCategory, string, string?), int> numbers)
     {
         if (computed.LeftToAPerson.Count == 0) return;
 
@@ -221,8 +233,9 @@ public static class RemainingWorkEmitter
                      .OrderBy(g => g.Key, StringComparer.Ordinal))
         {
             var first = group.First();
+            var number = numbers[(WorklistCategory.ComputedValue, group.Key, null)];
 
-            sb.AppendLine($"### {group.Key}");
+            sb.AppendLine($"### {number}. {group.Key}");
             sb.AppendLine();
 
             if (first.Target.Page?.Title is { Length: > 0 } page)
@@ -310,7 +323,9 @@ public static class RemainingWorkEmitter
     /// field only ever shown and never hidden needs someone to say whether it should hide
     /// again, because FormWorks state persists and a predicate does not.
     /// </summary>
-    private static void EmitState(StringBuilder sb, TemplateDocument doc, VisibilityResult state)
+    private static void EmitState(
+        StringBuilder sb, TemplateDocument doc, VisibilityResult state,
+        IReadOnlyDictionary<(WorklistCategory, string, string?), int> numbers)
     {
         if (state.LeftToAPerson.Count == 0) return;
 
@@ -338,9 +353,10 @@ public static class RemainingWorkEmitter
             foreach (var field in group.OrderBy(f => f.Target.Label, StringComparer.Ordinal))
             {
                 var where = field.Target.Page?.Title;
+                var number = numbers[(WorklistCategory.State, field.Target.Label, field.Property)];
 
                 sb.AppendLine(
-                    $"- **{field.Target.Label}**`.{field.Property}`"
+                    $"- **{number}.** **{field.Target.Label}**`.{field.Property}`"
                     + (where is null ? "" : $" on {where}")
                     + $" — {field.Writes.Count} write(s) from "
                     + string.Join(", ", field.Sources.Select(s => $"`{s}`")));
@@ -362,7 +378,9 @@ public static class RemainingWorkEmitter
     /// is not refused, and it reached no element, so it does nothing. That is the one
     /// failure a worklist exists to prevent.
     /// </summary>
-    private static void EmitUnattributed(StringBuilder sb, TemplateDocument doc, VisibilityResult state)
+    private static void EmitUnattributed(
+        StringBuilder sb, TemplateDocument doc, VisibilityResult state,
+        IReadOnlyDictionary<(WorklistCategory, string, string?), int> numbers)
     {
         if (state.Unattributed.Count == 0) return;
 
@@ -384,7 +402,9 @@ public static class RemainingWorkEmitter
                 .Where(n => n.Names.Contains(rule.Name, StringComparer.Ordinal))
                 .ToList();
 
-            sb.AppendLine($"### {rule.Name}`.{rule.Property}`");
+            var number = numbers[(WorklistCategory.Unattributed, rule.Name, rule.Property)];
+
+            sb.AppendLine($"### {number}. {rule.Name}`.{rule.Property}`");
             sb.AppendLine();
             sb.AppendLine($"Written by {string.Join(", ", rule.Sources.Select(w => $"`{w}`"))}.");
             sb.AppendLine();
@@ -402,7 +422,11 @@ public static class RemainingWorkEmitter
         }
     }
 
-    private static string Why(FieldState field) => field.Shape switch
+    /// <summary>
+    /// Why a field's shown/usable state is left to a person. Internal rather than private:
+    /// WorklistEmitter groups by the same reason, so the two have to agree on the text.
+    /// </summary>
+    internal static string Why(FieldState field) => field.Shape switch
     {
         StateShape.MultiSource =>
             "Several handlers decide it, and the template does not record which wins",
