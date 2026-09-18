@@ -4,7 +4,9 @@ Running log for the FormWorks to MAUI converter. Newest phase at the top. Trimme
 things land: this records where the work is, not everything it has ever been.
 
 Decisions live in `converter-decisions.md`. The original plan is `generator-plan.md`,
-and its sequencing has been revised once, recorded as D2.
+and its sequencing has been revised once, recorded as D2. Converting real templates from
+the estate one at a time, with per-template status and issues found along the way, is
+tracked separately in `estate-conversion-log.md`.
 
 ---
 

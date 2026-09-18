@@ -202,8 +202,17 @@ public static class ReportEmitter
         sb.AppendLine("            }");
         sb.AppendLine("        }");
         sb.AppendLine();
+        sb.AppendLine("        OnOpened();");
         sb.AppendLine("        return problems;");
         sb.AppendLine("    }");
+        sb.AppendLine();
+        sb.AppendLine("    /// <summary>");
+        sb.AppendLine("    /// Where a template's OnOpen handlers are written, in the hand-written half of");
+        sb.AppendLine("    /// this class. Runs once, after a job's values are applied - not once per page,");
+        sb.AppendLine("    /// since the report opens once for the whole job. Listed per template in");
+        sb.AppendLine("    /// Remaining.md under \"Answers the form fills in\".");
+        sb.AppendLine("    /// </summary>");
+        sb.AppendLine("    partial void OnOpened();");
 
         sb.AppendLine();
         sb.AppendLine("    /// <summary>Every answer, keyed the way the portal expects.</summary>");

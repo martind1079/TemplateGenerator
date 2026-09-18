@@ -176,6 +176,20 @@ public class FieldExchangeTests
     }
 
     [Fact]
+    public void Apply_calls_the_hand_written_OnOpened_hook_once_after_every_field_is_set()
+    {
+        // The report opens once for the whole job, not once per page, so OnOpen handlers
+        // belong here rather than on a page's OnValidated.
+        var code = Report(("Text", "Reference"));
+
+        Assert.Contains("partial void OnOpened();", code);
+
+        var applyBody = code[code.IndexOf("public IReadOnlyList<FieldProblem> Apply", StringComparison.Ordinal)..
+            code.IndexOf("return problems;", StringComparison.Ordinal)];
+        Assert.Contains("OnOpened();", applyBody);
+    }
+
+    [Fact]
     public void The_accepted_formats_are_configuration()
     {
         var doc = TemplateLoader.LoadJson(

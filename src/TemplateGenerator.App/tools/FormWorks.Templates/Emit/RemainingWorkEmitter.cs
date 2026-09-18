@@ -211,6 +211,10 @@ public static class RemainingWorkEmitter
         sb.AppendLine("Write them in the page's hand-written view model, in the same place as a validation");
         sb.AppendLine("rule. Most read a value the handler works out first.");
         sb.AppendLine();
+        sb.AppendLine("`OnOpen` writes are the exception: the report opens once for the whole job, not");
+        sb.AppendLine("once per page, so those belong in the report's own hand-written `OnOpened()`");
+        sb.AppendLine("instead of a page's view model.");
+        sb.AppendLine();
 
         foreach (var group in computed.LeftToAPerson
                      .GroupBy(w => w.Target.Label, StringComparer.Ordinal)
@@ -235,6 +239,24 @@ public static class RemainingWorkEmitter
             }
 
             sb.AppendLine();
+
+            // "Which the handler works out first" can be a date sum, a lookup in an
+            // in-memory table, or a database query the handler makes itself: the field's
+            // caption does not say which, so the source is the only way to tell them apart.
+            var shown = new HashSet<(string, string)>();
+
+            foreach (var write in group.Where(w => w.Source == ValueSource.Computed))
+            {
+                if (!shown.Add((write.Owner.Label, write.Event))) continue;
+                if (!write.Owner.Scripts.TryGetValue(write.Event, out var script)) continue;
+
+                sb.AppendLine($"The original `{write.Event}` handler on `{write.Owner.Label}`:");
+                sb.AppendLine();
+                sb.AppendLine("```lua");
+                sb.AppendLine(script.Trim());
+                sb.AppendLine("```");
+                sb.AppendLine();
+            }
         }
     }
 
